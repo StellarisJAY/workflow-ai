@@ -7,14 +7,16 @@ import LLMNode from './llmNode.vue';
 import CustomEdge from './customEdge.vue';
 import StartNode from './startNode.vue';
 import EndNode from './endNode.vue';
-import knowledgeRetrivalNode from './knowledgeRetrivalNode.vue';
+import knowledgeRetrievalNode from './knowledgeRetrivalNode.vue';
 import knowledgeWriteNode from './knowledgeWriteNode.vue';
 import conditionNode from './conditionNode.vue';
 import { Button, PageHeader, Select, Modal, Drawer } from 'ant-design-vue';
+import llmAPI from '../../api/llm';
+import LlmSetting from './setting/LLMSetting.vue';
 
 const nodeTypeOptions = ref([
 	{ value: "llm", label: "大模型", description: "使用提示词和变量让大模型生成内容" },
-	{ value: "knowledgeRetrival", label: "知识库检索", description: "从知识库检索数据" },
+	{ value: "knowledgeRetrieval", label: "知识库检索", description: "从知识库检索数据" },
 	{ value: "knowledgeWrite", label: "知识库写入", description: "将数据写入知识库" },
 	{ value: "condition", label: "条件", description: "条件分支" }
 ]);
@@ -27,7 +29,7 @@ const nodeTypes = ref({
 	start: markRaw(StartNode),
 	end: markRaw(EndNode),
 	condition: markRaw(conditionNode),
-	knowledgeRetrival: markRaw(knowledgeRetrivalNode),
+	knowledgeRetrieval: markRaw(knowledgeRetrievalNode),
 	knowledgeWrite: markRaw(knowledgeWriteNode)
 });
 
@@ -51,18 +53,23 @@ const nodes = ref([
 ]);
 const edges = ref([]);
 const newNodeModalOpen = ref(false);
-const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop } = useVueFlow();
+const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop, 
+	onNodesChange, onNodeMouseEnter, onNodeMouseLeave} = useVueFlow();
 
 const llmDrawerOpen = ref(false);
-const knowledgeRetrivalDrawerOpen = ref(false);
+const knowledgeRetrievalDrawerOpen = ref(false);
 const knowledgeWriteDrawerOpen = ref(false);
 const currentSettingNode = ref({});
+
+const llmList = ref([]);
+
+llmAPI.listModels({}).then(resp=>llmList.value = resp.data);
 
 onNodeClick(event => {
 	currentSettingNode.value = event.node;
 	switch (event.node.type) {
 		case "llm": llmDrawerOpen.value = true; break;
-		case "knowledgeRetrival": knowledgeRetrivalDrawerOpen.value = true; break;
+		case "knowledgeRetrieval": knowledgeRetrivalDrawerOpen.value = true; break;
 		case "knowledgeWrite": knowledgeWriteDrawerOpen.value = true; break;
 	}
 });
@@ -79,27 +86,60 @@ onConnect(event => {
 onEdgesChange(ev => {
 	ev.forEach(e => {
 		if (e.type === "remove") {
-			removeNode(e.id);
+			removeEdge(e.id);
 		}
 	});
 });
 
+onNodesChange(ev=>{
+	ev.forEach(e=>{
+		if (e.type === "remove") {
+			removeNode(e.id);
+		}
+	})
+});
+
 onNodeDragStop(ev => {
 	nodes.value.find(n => n.id === ev.node.id).position = ev.node.position;
-})
+});
+
+onNodeMouseEnter(ev=>{
+	if (ev.node.type === "start" || ev.node.type === "end") {
+		return;
+	}
+	ev.node.showControls = true;
+});
+
+onNodeMouseLeave(ev=>{
+	if (ev.node.type === "start" || ev.node.type === "end") {
+		return;
+	}
+	ev.node.showControls = false;
+});
 
 function addNode(nodeType) {
 	const id = crypto.randomUUID();
-	nodes.value.push({
+	const node = {
 		type: nodeType,
 		id: id,
 		position: { x: 300, y: 200 },
 		data: {}
-	});
+	};
+	switch (nodeType) {
+		case "llm": node.data = initLLMNodeData(); break;
+		case "knowledgeRetrival": break;
+		case "knowledgeWrite": break;
+		case "condition": break;
+	}
+	nodes.value.push(node);
 }
 
 function removeNode(id) {
-	edges.value = edges.value.filter(n => n.id !== id);
+	nodes.value = nodes.value.filter(n => n.id !== id);
+}
+
+function removeEdge(id) {
+	edges.value = edges.value.filter(e=>e.id !== id);
 }
 
 function getJSON() {
@@ -126,6 +166,15 @@ function saveTemplate() {
 	const data = getJSON();
 	console.log(data);
 }
+
+function initLLMNodeData() {
+	const model = llmList.value[0];
+	return {
+		modelName: model.name,
+		inputVariables: ["input"],
+		outputVariables: ["output"]
+	};
+}
 </script>
 
 <template>
@@ -137,7 +186,7 @@ function saveTemplate() {
 	<div style="height: 88vh;">
 		<VueFlow :nodes="nodes" :edges="edges" :node-types="nodeTypes" :edge-types="edgeTypes"
 			:connection-mode="ConnectionMode.Strict">
-			<Background />
+			<Background pattern-color="rgb(160, 160, 160)" />
 			<Panel :position="Position.Bottom">
 				<Button type="primary" @click="openNewNodeModal">添加节点</Button>
 			</Panel>
@@ -154,8 +203,9 @@ function saveTemplate() {
 	</Modal>
 
 	<Drawer title="大模型配置" :open="llmDrawerOpen" @close="_=>{llmDrawerOpen = false;}">
+    <LlmSetting v-model:node="currentSettingNode"/>
 	</Drawer>
-	<Drawer title="知识库检索配置" :open="knowledgeRetrivalDrawerOpen" @close="_=>{knowledgeRetrivalDrawerOpen = false;}"></Drawer>
+	<Drawer title="知识库检索配置" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}"></Drawer>
 	<Drawer title="知识库写入配置" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
 </template>
 

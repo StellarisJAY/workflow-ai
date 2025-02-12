@@ -23,7 +23,7 @@ func (tr *TemplateRepo) Insert(ctx context.Context, template *model.Template) er
 
 func (tr *TemplateRepo) GetDetail(ctx context.Context, id int64) (*model.TemplateDetailDTO, error) {
 	var template *model.TemplateDetailDTO
-	err := tr.db.Table(templateTableName+" t").
+	err := tr.DB(ctx).Table(templateTableName+" t").
 		Joins("INNER JOIN wf_user u ON u.user_id = t.add_user").
 		Select("t.*, u.username AS add_username").
 		Where("t.id =?", id).
@@ -38,7 +38,7 @@ func (tr *TemplateRepo) GetDetail(ctx context.Context, id int64) (*model.Templat
 
 func (tr *TemplateRepo) List(ctx context.Context, query *model.TemplateQuery) ([]*model.TemplateListDTO, error) {
 	var templates []*model.TemplateListDTO
-	tx := tr.db.Table(templateTableName + " t").
+	tx := tr.DB(ctx).Table(templateTableName + " t").
 		Joins("INNER JOIN wf_user u ON u.user_id = t.add_user").
 		Select("t.*, u.username AS add_username").
 		WithContext(ctx)

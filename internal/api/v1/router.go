@@ -5,7 +5,9 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/middleware"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
+	"github.com/StellrisJAY/workflow-ai/internal/workflow"
 	"github.com/bwmarrin/snowflake"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"strconv"
 )
@@ -36,13 +38,24 @@ func (r *Router) Init() error {
 	}
 	llmRepo := repo.NewLLMRepo(repository)
 	templateRepo := repo.NewTemplateRepo(repository)
+	instanceRepo := repo.NewInstanceRepo(repository)
+	tm := repo.NewTransactionManager(repository)
+	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm)
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
+	workflowService := service.NewWorkflowService(templateRepo, engine)
 	llmHandler := NewLLMHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)
+	workflowHandler := NewWorkflowHandler(workflowService)
 
 	r.e.Use(middleware.Recovery)
+	r.e.Use(cors.New(cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		AllowAllOrigins:  true,
+	}))
 	v1 := r.e.Group("/api/v1")
 	{
 		v1.GET("/ping", func(c *gin.Context) {
@@ -63,6 +76,10 @@ func (r *Router) Init() error {
 			template.PUT("/update", nil)
 			template.GET("/detail/:id", templateHandler.GetDetail)
 			template.GET("/list", templateHandler.List)
+		}
+		wf := v1.Group("/workflow")
+		{
+			wf.POST("/start", workflowHandler.Start)
 		}
 	}
 	return nil

@@ -1,11 +1,10 @@
 /* Use a purple theme for our custom node */
 .vue-flow__node {
     background: white;
-    color: black;
-    border: 1px solid rgb(0, 0, 0);
     border-radius: 4px;
-    box-shadow: 0 0 0 1px rgb(0, 0, 0);
+    box-shadow: -2px -2px 2px rgb(160, 160, 160);
     padding: 8px;
+    border: 1px solid black;
 }
 
 .vue-flow__handle {
@@ -13,19 +12,9 @@
 }
 
 .vue-flow__node-start {
-    background: white;
-    color: rgb(97, 85, 255);
-    border: 1px solid rgb(97, 85, 255);
-    border-radius: 4px;
-    box-shadow: 0 0 0 1px rgb(97, 85, 255);
-    padding: 8px;
+    color: blue;
 }
 
 .vue-flow__node-end {
-    background: white;
     color: rgb(255, 0, 0);
-    border: 1px solid rgb(255, 0, 0);
-    border-radius: 4px;
-    box-shadow: 0 0 0 1px rgb(255, 0, 0);
-    padding: 8px;
 }

@@ -31,6 +31,7 @@ type WorkflowInstance struct {
 	CompleteTime time.Time              `json:"completeTime"`
 }
 
+// NodeInstance 节点实例表
 type NodeInstance struct {
 	Id           int64              `json:"id"`
 	WorkflowId   int64              `json:"workflowId"`
@@ -38,6 +39,7 @@ type NodeInstance struct {
 	AddTime      time.Time          `json:"addTime"`
 	CompleteTime time.Time          `json:"completeTime"`
 	Status       NodeInstanceStatus `json:"status"`
-	Input        string             `json:"input"`
-	Output       string             `json:"output"`
+	Input        string             `json:"input"`  // 节点输入变量json
+	Output       string             `json:"output"` // 节点输出变量json
+	Error        string             `json:"error"`  // 节点执行错误信息
 }

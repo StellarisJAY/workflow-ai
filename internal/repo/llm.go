@@ -18,12 +18,12 @@ func NewLLMRepo(repo *Repository) *LLMRepo {
 }
 
 func (lr *LLMRepo) Insert(ctx context.Context, llm *model.LLM) error {
-	return lr.db.Table(llmTableName).WithContext(ctx).Create(llm).Error
+	return lr.DB(ctx).Table(llmTableName).WithContext(ctx).Create(llm).Error
 }
 
 func (lr *LLMRepo) GetDetail(ctx context.Context, id int64) (*model.LLMDetailDTO, error) {
 	var llm *model.LLMDetailDTO
-	err := lr.db.Table(llmTableName+" llm").
+	err := lr.DB(ctx).Table(llmTableName+" llm").
 		Joins("INNER JOIN wf_user u ON u.user_id = llm.add_user").
 		Select("llm.*, u.username AS add_username").
 		Where("llm.id =?", id).
@@ -37,7 +37,7 @@ func (lr *LLMRepo) GetDetail(ctx context.Context, id int64) (*model.LLMDetailDTO
 }
 
 func (lr *LLMRepo) List(ctx context.Context, query *model.LLMQuery) ([]*model.LLMListDTO, error) {
-	tx := lr.db.Table(llmTableName + " llm").
+	tx := lr.DB(ctx).Table(llmTableName + " llm").
 		Joins("INNER JOIN wf_user u ON u.user_id = llm.add_user").
 		Select("llm.*, u.username AS add_username").
 		WithContext(ctx)
