@@ -18,7 +18,7 @@ const (
 )
 
 type LLM struct {
-	Id        int64     `json:"id"`
+	Id        int64     `json:"id,string"`
 	Name      string    `json:"name"`
 	ApiType   string    `json:"apiType"`
 	BaseUrl   string    `json:"baseUrl"`
@@ -30,7 +30,7 @@ type LLM struct {
 }
 
 type LLMDetailDTO struct {
-	Id          int64     `json:"id"`
+	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	ApiType     string    `json:"apiType"`
 	BaseUrl     string    `json:"baseUrl"`
@@ -50,7 +50,7 @@ type LLMQuery struct {
 }
 
 type LLMListDTO struct {
-	Id          int64     `json:"id"`
+	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	ApiType     string    `json:"apiType"`
 	Code        string    `json:"code"`

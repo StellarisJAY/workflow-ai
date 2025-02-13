@@ -14,7 +14,6 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/prompts"
 	"log"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -53,9 +52,9 @@ func (e *Engine) Start(ctx context.Context, template *model.TemplateDetailDTO, a
 	}
 	// 检查输入变量是否全部存在
 	inputVariables := startNodeData.InputVariables
-	for _, key := range inputVariables {
-		if _, ok := input[key]; !ok {
-			return fmt.Errorf("missing input variable: %s", key)
+	for _, variable := range inputVariables {
+		if _, ok := input[variable.Name]; !ok {
+			return fmt.Errorf("missing input variable: %s", variable.Name)
 		}
 	}
 	instance := &model.WorkflowInstance{
@@ -73,10 +72,11 @@ func (e *Engine) Start(ctx context.Context, template *model.TemplateDetailDTO, a
 		Id:           e.snowflake.Generate().Int64(),
 		NodeId:       startNode.Id,
 		Status:       model.NodeInstanceStatusCompleted, // 开始节点实例始终为完成状态
-		Input:        string(inputJSON),
+		Output:       string(inputJSON),
 		WorkflowId:   instance.Id,
 		AddTime:      time.Now(),
 		CompleteTime: time.Now(),
+		Type:         startNode.Type,
 	}
 
 	err := e.tm.Tx(ctx, func(ctx context.Context) error {
@@ -96,59 +96,92 @@ func (e *Engine) Start(ctx context.Context, template *model.TemplateDetailDTO, a
 	return nil
 }
 
-func (e *Engine) getInputMap(node *model.Node, workflowInstanceId int64) (map[string]any, error) {
-	var inputVariables map[string]string
-	switch model.NodeType(node.Type) {
-	case model.NodeTypeLLM:
-		inputVariables = node.Data.LLMNodeData.InputVariables
-	}
-	return e.findVariables(inputVariables, workflowInstanceId)
-}
+//func (e *Engine) getInputMap(node *model.Node, workflowInstanceId int64) (map[string]any, error) {
+//	var inputVariables map[string]string
+//	switch model.NodeType(node.Type) {
+//	case model.NodeTypeLLM:
+//		inputVariables = node.Data.LLMNodeData.InputVariables
+//	}
+//	return e.findVariables(inputVariables, workflowInstanceId)
+//}
+//
+//func (e *Engine) findVariables(variables map[string]string, workflowInstanceId int64) (map[string]any, error) {
+//	result := make(map[string]any)
+//	// 匹配{{来源变量名}}
+//	regex := regexp.MustCompile("{{[^}]+}}")
+//	for name, origin := range variables {
+//		// 直接输入值的变量
+//		if !regex.MatchString(origin) {
+//			result[name] = origin
+//			continue
+//		}
+//		// 需要从来源获取值的变量
+//		origin = strings.TrimPrefix(origin, "{{")
+//		origin = strings.TrimSuffix(origin, "}}")
+//		parts := strings.Split(origin, ".")
+//		if len(parts) != 2 {
+//			return nil, errors.New("变量来源格式错误")
+//		}
+//		originNodeId, originVarName := parts[0], parts[1]
+//		originNode, _ := e.instanceRepo.GetNodeInstanceByNodeId(context.Background(), workflowInstanceId, originNodeId)
+//		if originNode == nil {
+//			continue
+//		}
+//		originInputVars := make(map[string]any)
+//		originOutputVars := make(map[string]any)
+//		_ = json.Unmarshal([]byte(originNode.Input), &originInputVars)
+//		_ = json.Unmarshal([]byte(originNode.Output), &originOutputVars)
+//		if value, ok := originInputVars[originVarName]; ok {
+//			result[name] = value
+//			continue
+//		}
+//		if value, ok := originOutputVars[originVarName]; ok {
+//			result[name] = value
+//		}
+//	}
+//	return result, nil
+//}
 
-func (e *Engine) findVariables(variables map[string]string, workflowInstanceId int64) (map[string]any, error) {
+func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.Variable, workflowId int64) (map[string]any, error) {
 	result := make(map[string]any)
-	// 匹配{{来源变量名}}
-	regex := regexp.MustCompile("{{[^}]+}}")
-	for name, origin := range variables {
-		// 直接输入值的变量
-		if !regex.MatchString(origin) {
-			result[name] = origin
-			continue
-		}
-		// 需要从来源获取值的变量
-		origin = strings.TrimPrefix(origin, "{{")
-		origin = strings.TrimSuffix(origin, "}}")
-		parts := strings.Split(origin, ".")
-		if len(parts) != 2 {
-			return nil, errors.New("变量来源格式错误")
-		}
-		originNodeId, originVarName := parts[0], parts[1]
-		originNode, _ := e.instanceRepo.GetNodeInstanceByNodeId(context.Background(), workflowInstanceId, originNodeId)
-		if originNode == nil {
-			continue
-		}
-		originInputVars := make(map[string]any)
-		originOutputVars := make(map[string]any)
-		_ = json.Unmarshal([]byte(originNode.Input), &originInputVars)
-		_ = json.Unmarshal([]byte(originNode.Output), &originOutputVars)
-		if value, ok := originInputVars[originVarName]; ok {
-			result[name] = value
-			continue
-		}
-		if value, ok := originOutputVars[originVarName]; ok {
-			result[name] = value
+	nodeInstancesCache := make(map[string]*model.NodeInstance)
+	for _, variable := range variableDef {
+		if variable.Type == string(model.VariableTypeRef) {
+			parts := strings.Split(variable.Value, ".")
+			if len(parts) != 2 {
+				return nil, errors.New("变量来源格式错误")
+			}
+			originNodeId, originVarName := parts[0], parts[1]
+			var originNodeInstance *model.NodeInstance
+			if n, ok := nodeInstancesCache[originNodeId]; ok {
+				originNodeInstance = n
+			} else {
+				originNodeInstance, _ = e.instanceRepo.GetNodeInstanceByNodeId(ctx, workflowId, originNodeId)
+				if originNodeInstance == nil {
+					continue
+				}
+				nodeInstancesCache[originNodeId] = originNodeInstance
+			}
+			var inputMap map[string]any
+			_ = json.Unmarshal([]byte(originNodeInstance.Output), &inputMap)
+			if value, ok := inputMap[originVarName]; ok {
+				result[variable.Name] = value
+			}
 		}
 	}
 	return result, nil
 }
 
-func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
-	inputMap map[string]any) error {
+func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance) error {
 	switch node.Type {
 	case string(model.NodeTypeLLM):
 		llmNodeData := node.Data.LLMNodeData
 		if llmNodeData == nil {
 			return fmt.Errorf("invalid LLM node data")
+		}
+		inputMap, err := e.LookupInputVariables(ctx, llmNodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			return err
 		}
 		go func() {
 			e.executeLLMNode(ctx, node, nodeInstance, llmNodeData, inputMap)
@@ -194,24 +227,14 @@ func (e *Engine) createNextNode(ctx context.Context, currNode *model.Node, currN
 			WorkflowId:   currNodeInstance.WorkflowId,
 			AddTime:      time.Now(),
 			CompleteTime: time.Now(),
-		}
-		var inputMap map[string]any
-		// 结束节点没有输入列表
-		if next.Type != string(model.NodeTypeEnd) {
-			inputMap, err = e.getInputMap(next, currNodeInstance.WorkflowId)
-			if err != nil {
-				log.Println("get input map error", err)
-				continue
-			}
-			inputs, _ := json.Marshal(inputMap)
-			nodeInstance.Input = string(inputs)
+			Type:         next.Type,
 		}
 		if err := e.instanceRepo.InsertNodeInstance(ctx, nodeInstance); err != nil {
 			log.Println("insert node instance error", err)
 			continue
 		}
 		// 创建节点任务
-		if err := e.executeNode(context.TODO(), next, nodeInstance, inputMap); err != nil {
+		if err := e.executeNode(context.TODO(), next, nodeInstance); err != nil {
 			log.Println("execute node instance error", err)
 		}
 	}
@@ -242,10 +265,11 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	case model.ApiTypeOpenAI:
 		llm, err = openai.New(openai.WithModel(detail.Code),
 			openai.WithBaseURL(detail.BaseUrl),
-			openai.WithToken(detail.ApiKey))
+			openai.WithToken(detail.ApiKey),
+			openai.WithResponseFormat(openai.ResponseFormatJSON))
 	case model.ApiTypeOllama:
 		llm, err = ollama.New(ollama.WithServerURL(detail.BaseUrl),
-			ollama.WithModel(detail.Code))
+			ollama.WithModel(detail.Code), ollama.WithFormat("json"))
 	default:
 		panic(errors.New("不支持的大模型类型"))
 	}
@@ -256,8 +280,8 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	}
 	// 创建提示词模板
 	inputVariables := make([]string, 0, len(llmNodeData.InputVariables))
-	for _, key := range llmNodeData.InputVariables {
-		inputVariables = append(inputVariables, key)
+	for _, variable := range llmNodeData.InputVariables {
+		inputVariables = append(inputVariables, variable.Name)
 	}
 	prompt := prompts.NewPromptTemplate(llmNodeData.UserPrompt, inputVariables)
 	// 创建langchain，调用大模型API
@@ -267,8 +291,8 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 		panic(err)
 	}
 	// 将大模型输出结果写入节点实例，修改节点实例为完成状态
-	output, _ := json.Marshal(response)
-	nodeInstance.Output = string(output)
+	output := response[chain.OutputKey].(string)
+	nodeInstance.Output = output
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
@@ -290,7 +314,7 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 		}
 	}()
 	outputVars := endNodeData.OutputVariables
-	outputMap, err := e.findVariables(outputVars, nodeInstance.WorkflowId)
+	outputMap, err := e.LookupInputVariables(ctx, outputVars, nodeInstance.WorkflowId)
 	if err != nil {
 		log.Println("find output map error", err)
 		panic(errors.New("无法获取output所需的变量"))
@@ -304,7 +328,6 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 	}
 	if err := e.instanceRepo.UpdateWorkflowInstance(ctx, &model.WorkflowInstance{
 		Id:           nodeInstance.WorkflowId,
-		Output:       nodeInstance.Output,
 		Status:       model.WorkflowInstanceStatusCompleted,
 		CompleteTime: time.Now(),
 	}); err != nil {

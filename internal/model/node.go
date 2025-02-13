@@ -11,12 +11,21 @@ const (
 	NodeTypeCrawler            NodeType = "crawler"            // 爬虫节点
 )
 
+type VariableType string
+
+const (
+	VariableTypeNumber VariableType = "number"
+	VariableTypeString VariableType = "string"
+	VariableTypeFile   VariableType = "file"
+	VariableTypeRef    VariableType = "ref" // 引用其他节点的变量, 值为 节点ID.变量名
+)
+
 type Node struct {
 	Id       string `json:"id"`   // 节点ID
 	Type     string `json:"type"` // 节点类型
 	Position struct {
-		X int `json:"x"`
-		Y int `json:"y"`
+		X float64 `json:"x"`
+		Y float64 `json:"y"`
 	} `json:"position"` // 节点位置
 	Data struct {
 		LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
@@ -29,13 +38,13 @@ type Node struct {
 
 // LLMNodeData LLM节点数据
 type LLMNodeData struct {
-	ModelName       string            `json:"model"`           // 模型名称
-	ModelId         int64             `json:"modelId"`         // 模型ID
-	SystemPrompt    string            `json:"systemPrompt"`    // 系统提示词
-	UserPrompt      string            `json:"userPrompt"`      // 用户提示词
-	InputVariables  map[string]string `json:"inputVariables"`  // 输入变量列表, key:变量名，value：变量来源{{nodeId.xxx}}或空(运行时输入)
-	OutputFormat    string            `json:"outputFormat"`    // 输出格式 text,markdown,json
-	OutputVariables []string          `json:"outputVariables"` // 输出变量名列表
+	ModelName       string      `json:"model"`           // 模型名称
+	ModelId         int64       `json:"modelId,string"`  // 模型ID
+	SystemPrompt    string      `json:"systemPrompt"`    // 系统提示词
+	UserPrompt      string      `json:"userPrompt"`      // 用户提示词
+	InputVariables  []*Variable `json:"inputVariables"`  // 输入变量列表, key:变量名，value：变量来源{{nodeId.xxx}}或空(运行时输入)
+	OutputFormat    string      `json:"outputFormat"`    // 输出格式 text,markdown,json
+	OutputVariables []*Variable `json:"outputVariables"` // 输出变量名列表
 }
 
 // KnowledgeBaseWriteNodeData 写入知识库节点数据
@@ -51,9 +60,15 @@ type RetrieveKnowledgeBaseNodeData struct {
 }
 
 type StartNodeData struct {
-	InputVariables []string `json:"inputVariables"` // 输入变量列表
+	InputVariables []*Variable `json:"inputVariables"` // 输入变量列表
+}
+
+type Variable struct {
+	Type  string `json:"type"`  // 变量类型
+	Name  string `json:"name"`  // 变量名
+	Value string `json:"value"` // 变量值
 }
 
 type EndNodeData struct {
-	OutputVariables map[string]string `json:"outputVariables"` // 输出变量列表 key: 变量名，value: 变量来源 {{nodeId.xxx}}
+	OutputVariables []*Variable `json:"outputVariables"` // 输出变量列表 key: 变量名，value: 变量来源 {{nodeId.xxx}}
 }

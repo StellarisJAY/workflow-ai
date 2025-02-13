@@ -1,14 +1,14 @@
-/* Use a purple theme for our custom node */
 .vue-flow__node {
     background: white;
     border-radius: 4px;
-    box-shadow: -2px -2px 2px rgb(160, 160, 160);
-    padding: 8px;
-    border: 1px solid black;
+    box-shadow: 0 0 4px rgb(120, 120, 120);
 }
 
 .vue-flow__handle {
-    background-color: red;
+    background: #8d8dff;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
 }
 
 .vue-flow__node-start {

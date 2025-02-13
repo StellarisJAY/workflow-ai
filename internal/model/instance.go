@@ -20,11 +20,9 @@ const (
 )
 
 type WorkflowInstance struct {
-	Id           int64                  `json:"id"`
-	TemplateId   int64                  `json:"templateId"`
+	Id           int64                  `json:"id,string"`
+	TemplateId   int64                  `json:"templateId,string"`
 	Data         string                 `json:"data"`
-	Input        string                 `json:"input"`
-	Output       string                 `json:"output"`
 	Status       WorkflowInstanceStatus `json:"status"`
 	AddTime      time.Time              `json:"addTime"`
 	AddUser      int64                  `json:"addUser"`
@@ -35,11 +33,11 @@ type WorkflowInstance struct {
 type NodeInstance struct {
 	Id           int64              `json:"id"`
 	WorkflowId   int64              `json:"workflowId"`
+	Type         string             `json:"type"`
 	NodeId       string             `json:"nodeId"`
 	AddTime      time.Time          `json:"addTime"`
 	CompleteTime time.Time          `json:"completeTime"`
 	Status       NodeInstanceStatus `json:"status"`
-	Input        string             `json:"input"`  // 节点输入变量json
 	Output       string             `json:"output"` // 节点输出变量json
 	Error        string             `json:"error"`  // 节点执行错误信息
 }

@@ -1,14 +1,16 @@
 <script setup>
-import {Input, List, ListItem} from "ant-design-vue";
+import VariableTable from "./VariableTable.vue";
 
 defineProps(['node']);
-
 </script>
 
 <template>
-  <List title="输入变量列表">
-
-  </List>
+  <VariableTable :input-variables="node.data.inputVariables"
+                 :output-variables="node.data.outputVariables"
+                 :has-input="true"
+                 :has-output="false"
+                 :allow-ref="false"
+                 :node-id="node.id"/>
 </template>
 
 <style scoped></style>

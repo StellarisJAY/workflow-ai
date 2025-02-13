@@ -86,7 +86,6 @@ func (i *InstanceRepo) UpdateWorkflowInstance(ctx context.Context, instance *mod
 		Where("id=?", instance.Id).
 		UpdateColumns(map[string]interface{}{
 			"status":        instance.Status,
-			"output":        instance.Output,
 			"complete_time": instance.CompleteTime,
 		}).Error
 }
