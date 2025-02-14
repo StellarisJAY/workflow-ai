@@ -23,6 +23,7 @@ const (
 type Node struct {
 	Id       string `json:"id"`   // 节点ID
 	Type     string `json:"type"` // 节点类型
+	Name     string `json:"name"`
 	Position struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`

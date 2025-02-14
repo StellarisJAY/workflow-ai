@@ -36,31 +36,32 @@ func NewEngine(instanceRepo *repo.InstanceRepo, llmRepo *repo.LLMRepo, snowflake
 	}
 }
 
-func (e *Engine) Start(ctx context.Context, template *model.TemplateDetailDTO, addUser int64, input map[string]any) error {
+func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, addUser int64,
+	input map[string]any) (int64, error) {
 	var definition model.WorkflowDefinition
-	if err := json.Unmarshal([]byte(template.Data), &definition); err != nil {
-		return fmt.Errorf("invalid workflow definition")
+	if err := json.Unmarshal([]byte(defJSON), &definition); err != nil {
+		return 0, fmt.Errorf("invalid workflow definition")
 	}
 	idx := slices.IndexFunc(definition.Nodes, func(n *model.Node) bool { return n.Type == string(model.NodeTypeStart) })
 	if idx == -1 {
-		return fmt.Errorf("missing start node")
+		return 0, fmt.Errorf("missing start node")
 	}
 	startNode := definition.Nodes[idx]
 	startNodeData := startNode.Data.StartNodeData
 	if startNodeData == nil {
-		return fmt.Errorf("invalid start node")
+		return 0, fmt.Errorf("invalid start node")
 	}
 	// 检查输入变量是否全部存在
 	inputVariables := startNodeData.InputVariables
 	for _, variable := range inputVariables {
 		if _, ok := input[variable.Name]; !ok {
-			return fmt.Errorf("missing input variable: %s", variable.Name)
+			return 0, fmt.Errorf("missing input variable: %s", variable.Name)
 		}
 	}
 	instance := &model.WorkflowInstance{
 		Id:           e.snowflake.Generate().Int64(),
-		TemplateId:   template.Id,
-		Data:         template.Data,
+		TemplateId:   templateId,
+		Data:         defJSON,
 		Status:       model.WorkflowInstanceStatusRunning,
 		AddTime:      time.Now(),
 		AddUser:      addUser,
@@ -90,10 +91,10 @@ func (e *Engine) Start(ctx context.Context, template *model.TemplateDetailDTO, a
 		return nil
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
 	e.createNextNode(ctx, startNode, startNodeInstance)
-	return nil
+	return instance.Id, nil
 }
 
 //func (e *Engine) getInputMap(node *model.Node, workflowInstanceId int64) (map[string]any, error) {

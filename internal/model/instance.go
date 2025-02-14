@@ -41,3 +41,15 @@ type NodeInstance struct {
 	Output       string             `json:"output"` // 节点输出变量json
 	Error        string             `json:"error"`  // 节点执行错误信息
 }
+
+type NodeInstanceOutputDTO struct {
+	Id           int64              `json:"id"`
+	NodeId       string             `json:"nodeId"`
+	NodeName     string             `json:"nodeName"`
+	Type         string             `json:"type"`
+	AddTime      time.Time          `json:"addTime"`
+	CompleteTime time.Time          `json:"completeTime"`
+	Status       NodeInstanceStatus `json:"status"`
+	Output       string             `json:"output"`
+	Error        string             `json:"error"`
+}

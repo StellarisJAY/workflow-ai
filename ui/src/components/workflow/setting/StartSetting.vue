@@ -5,8 +5,8 @@ defineProps(['node']);
 </script>
 
 <template>
-  <VariableTable :input-variables="node.data.inputVariables"
-                 :output-variables="node.data.outputVariables"
+  <VariableTable :input-variables="node.data['startNodeData'].inputVariables"
+                 :output-variables="node.data['startNodeData'].outputVariables"
                  :has-input="true"
                  :has-output="false"
                  :allow-ref="false"

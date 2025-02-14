@@ -1,5 +1,5 @@
 <script setup>
-import { markRaw, ref } from 'vue'
+import {markRaw, ref, watch} from 'vue'
 import { Panel, ConnectionMode, Position, useVueFlow, VueFlow, MarkerType } from '@vue-flow/core'
 import { Background } from '@vue-flow/background';
 import LLMNode from './node/llmNode.vue';
@@ -9,12 +9,17 @@ import EndNode from './node/endNode.vue';
 import knowledgeRetrievalNode from './node/knowledgeRetrivalNode.vue';
 import knowledgeWriteNode from './node/knowledgeWriteNode.vue';
 import conditionNode from './node/conditionNode.vue';
-import { Button, PageHeader, Select, Modal, Drawer } from 'ant-design-vue';
+import { Button, PageHeader, Select, Modal, Drawer, Input } from 'ant-design-vue';
 import llmAPI from '../../api/llm';
 import templateAPI from '../../api/template.js';
+import workflowAPI from '../../api/workflow.js';
 import LlmSetting from './setting/LLMSetting.vue';
 import StartSetting from "./setting/StartSetting.vue";
 import NodeUtil from "../../util/nodeUtil.js";
+import EndSetting from "./setting/EndSetting.vue";
+import ExecutionLog from "../instance/executionLog.vue";
+
+const props = defineProps(['isNewTemplate','template'])
 
 const nodeTypeOptions = ref([
 	{ value: "llm", label: "大模型", description: "使用提示词和变量让大模型生成内容" },
@@ -22,6 +27,9 @@ const nodeTypeOptions = ref([
 	{ value: "knowledgeWrite", label: "知识库写入", description: "将数据写入知识库" },
 	{ value: "condition", label: "条件", description: "条件分支" }
 ]);
+const edgeTypes = ref({
+  custom: markRaw(CustomEdge),
+});
 
 const selectNodeType = ref("llm");
 
@@ -34,39 +42,55 @@ const nodeTypes = ref({
 	knowledgeWrite: markRaw(knowledgeWriteNode)
 });
 
-const edgeTypes = ref({
-	custom: markRaw(CustomEdge),
-});
-
-const nodes = ref([
-	{
-		id: "start",
-		type: "start",
-		position: { x: 100, y: 100 },
-		data: {
-      label: "开始",
-      inputVariables: [
-        {name: "input", type: "string", "value": ""}
-      ]
-    }
-	},
-	{
-		id: "end",
-		type: "end",
-		position: { x: 200, y: 100 },
-		data: {
-      label: "结束",
-      outputVariables: [
-        {name: "output", type: "string", value: ""}
-      ]
-    }
-	}
-]);
+const nodes = ref([]);
 const edges = ref([]);
+
+if (props.isNewTemplate) {
+  props.template.name = "新建模板"
+  nodes.value = [
+    {
+      id: "start",
+      type: "start",
+      position: { x: 100, y: 100 },
+      name: "开始",
+      data: {
+        startNodeData: {
+          inputVariables: [
+            {name: "input", type: "string", "value": ""}
+          ]
+        }
+      }
+    },
+    {
+      id: "end",
+      type: "end",
+      name: "结束",
+      position: { x: 200, y: 100 },
+      data: {
+        endNodeData: {
+          outputVariables: [
+            {name: "output", type: "string", value: ""}
+          ]
+        },
+      }
+    }
+  ];
+}else if (props.template['data']) {
+  const definition = JSON.parse(props.template['data']);
+  nodes.value = definition.nodes;
+  edges.value = definition.edges;
+}
+watch(()=>props.template, function (oldVal, newVal) {
+  const definition = JSON.parse(props.template['data']);
+  nodes.value = definition.nodes;
+  edges.value = definition.edges;
+}, {deep: true});
+
 const newNodeModalOpen = ref(false);
 const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop, 
-	onNodesChange, onNodeMouseEnter, onNodeMouseLeave} = useVueFlow();
+	onNodesChange} = useVueFlow();
 
+const executeLogDrawerOpen = ref(false);
 const llmDrawerOpen = ref(false);
 const knowledgeRetrievalDrawerOpen = ref(false);
 const knowledgeWriteDrawerOpen = ref(false);
@@ -135,7 +159,7 @@ function addNode(nodeType) {
 		data: {}
 	};
 	switch (nodeType) {
-		case "llm": node.data = initLLMNodeData(); break;
+		case "llm": node.data = initLLMNodeData(); node.name="大模型"; break;
 		case "knowledgeRetrival": break;
 		case "knowledgeWrite": break;
 		case "condition": break;
@@ -152,15 +176,6 @@ function removeEdge(id) {
 }
 // 获取流程模板JSON
 function getJSON() {
-  nodes.value.forEach((node)=>{
-    const temp = node.data;
-    node.data = null;
-    switch (node.type) {
-      case "start": node.data = {startNodeData: temp}; break;
-      case "end": node.data = {endNodeData: temp}; break;
-      case "llm": node.data = {llmNodeData: temp}; break;
-    }
-  });
 	return JSON.stringify({
 		nodes: nodes.value,
 		edges: edges.value,
@@ -183,16 +198,22 @@ function newNodeConfirm() {
 function saveTemplate() {
 	const data = getJSON();
   templateAPI.createTemplate({
-    name: "测试模板1",
+    name: props.template.name,
     data: data,
   });
+}
+
+function updateTemplate() {
+  const data = getJSON();
+  // TODO update API
 }
 // 初始化大模型节点数据
 function initLLMNodeData() {
 	return {
-    label: "大模型",
-		inputVariables: [{name:"input",type:"string",value:""}],
-		outputVariables: [{name: "output", type: "string", value: ""}],
+		llmNodeData: {
+      inputVariables: [{name:"input",type:"string",value:""}],
+      outputVariables: [{name: "output", type: "string", value: ""}],
+    }
 	};
 }
 // 获取前驱节点的输出变量列表
@@ -201,11 +222,15 @@ function getPrevNodesOutputs() {
   let options = [];
   prevNodes.forEach(node=>{
     if (!node.data) return;
-    let outputVariables = node.data.outputVariables;
-    if (node.type === "start") outputVariables = node.data.inputVariables;
+    let outputVariables;
+    switch (node.type) {
+      case "llm": outputVariables = node.data['llmNodeData'].outputVariables; break;
+      case "start": outputVariables = node.data['startNodeData'].inputVariables; break;
+      case "end": outputVariables = node.data['endNodeData'].outputVariables; break;
+    }
     if (outputVariables) {
       let option = {
-        label: node.data.label,
+        label: node.name,
         value: node.id,
         children: []
       };
@@ -220,7 +245,6 @@ function getPrevNodesOutputs() {
 
 function prepareLLMOptions() {
   llmAPI.listModels({}).then(resp=>{
-    console.log(resp.data);
     llmList.value = resp.data;
     const options = [];
     llmList.value.forEach(item=>{
@@ -230,12 +254,45 @@ function prepareLLMOptions() {
     llmDrawerOpen.value = true;
   });
 }
+
+const outputInterval = ref(0);
+const executeOutputs = ref([]);
+function execute() {
+  const data = getJSON();
+  workflowAPI.start({
+    definition: data,
+    inputs: {
+      input: "对于 Web 平台而言，WebAssembly 具有巨大的意义——它提供了一条使得以各种语言编写的代码都可以接近原生的速度在 " +
+          "Web 中运行的途径，使得以前无法在 Web 上运行的客户端应用程序得以在 Web 上运行。WebAssembly 被设计为可以和 JavaScript " +
+          "一起协同工作——通过使用 WebAssembly 的 JavaScript API，你可以把 WebAssembly 模块加载到 JavaScript " +
+          "应用中并且在两者之间共享功能。这允许你在同一个应用中利用 WebAssembly 的性能和能力以及 JavaScript 的表达力和灵活性，" +
+          "即使你可能并不知道如何编写 WebAssembly 代码。而且，更棒的是，这是由 W3C WebAssembly 工作组和社区组开发的 Web 标准，" +
+          "并得到了来自各大主要浏览器厂商的积极参与。"
+    }
+  }).then(resp=>{
+    executeLogDrawerOpen.value = true;
+    outputInterval.value = setInterval(_=>getExecuteOutputs(resp.data['workflowId']), 1000);
+  })
+}
+
+function getExecuteOutputs(workflowId) {
+  workflowAPI.getOutputs(workflowId).then(resp=>{
+    executeOutputs.value = resp.data;
+    const endNode = resp.data.find(n=>n.type === 'end');
+    if (endNode) {
+      clearInterval(outputInterval.value);
+    }
+  });
+}
 </script>
 
 <template>
-	<page-header title="配置流程" style="border: 1px solid rgb(235, 237, 240); height: 10vh;">
+	<page-header title="流程设计" style="border: 1px solid rgb(235, 237, 240); height: 10vh;">
 		<template #extra>
-			<Button type="primary" @click="saveTemplate">保存</Button>
+      <Input v-model:value="template.name"></Input>
+			<Button type="primary" @click="saveTemplate" v-if="isNewTemplate">保存</Button>
+      <Button type="primary" v-else>更新</Button>
+      <Button type="primary" success @click="execute">运行</Button>
 		</template>
 	</page-header>
 	<div style="height: 88vh;">
@@ -265,6 +322,13 @@ function prepareLLMOptions() {
 	<Drawer title="知识库写入配置" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
   <Drawer title="开始配置" :open="startDrawerOpen" @close="_=>{startDrawerOpen = false;}">
     <start-setting v-model:node="currentSettingNode"/>
+  </Drawer>
+  <Drawer title="结果配置" :open="endDrawerOpen" @close="_=>{endDrawerOpen = false;}">
+    <end-setting :output-variables="currentSettingNode.data['endNodeData'].outputVariables"
+                 :ref-options="settingRefOptions" :node="currentSettingNode"/>
+  </Drawer>
+  <Drawer title="执行结果" :open="executeLogDrawerOpen" @close="_=>{executeLogDrawerOpen = false;}">
+    <execution-log :outputs="executeOutputs"></execution-log>
   </Drawer>
 </template>
 

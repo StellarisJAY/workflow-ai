@@ -44,7 +44,7 @@ func (r *Router) Init() error {
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
-	workflowService := service.NewWorkflowService(templateRepo, engine)
+	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
 	llmHandler := NewLLMHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)
 	workflowHandler := NewWorkflowHandler(workflowService)
@@ -80,6 +80,8 @@ func (r *Router) Init() error {
 		wf := v1.Group("/workflow")
 		{
 			wf.POST("/start", workflowHandler.Start)
+			wf.GET("/detail/:id", workflowHandler.Outputs)
+			wf.GET("/outputs/:id", workflowHandler.Outputs)
 		}
 	}
 	return nil

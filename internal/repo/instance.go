@@ -89,3 +89,24 @@ func (i *InstanceRepo) UpdateWorkflowInstance(ctx context.Context, instance *mod
 			"complete_time": instance.CompleteTime,
 		}).Error
 }
+
+func (i *InstanceRepo) GetNodeInstanceOutputs(ctx context.Context, workflowId int64) ([]*model.NodeInstanceOutputDTO, error) {
+	var outputs []*model.NodeInstanceOutputDTO
+	err := i.DB(ctx).Table(NodeInstanceTableName).
+		Select("id, node_id, output, error, status, add_time, complete_time").
+		WithContext(ctx).
+		Where("workflow_id =?", workflowId).
+		Where("status != ?", model.NodeInstanceStatusRunning).
+		Scan(&outputs).Error
+	return outputs, err
+}
+
+func (i *InstanceRepo) GetWorkflowDefinition(ctx context.Context, workflowId int64) (string, error) {
+	var definition string
+	err := i.DB(ctx).Table(WorkflowInstanceTableName).
+		Select("data").
+		WithContext(ctx).
+		Where("id =?", workflowId).
+		Scan(&definition).Error
+	return definition, err
+}

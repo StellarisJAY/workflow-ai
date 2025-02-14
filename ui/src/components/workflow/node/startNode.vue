@@ -9,10 +9,10 @@ defineProps(['id', 'type', 'data']);
 <template>
 	<div>
 		<Handle type="target" :position="Position.Right" :connectable="true"></Handle>
-    <Card title="开始" :hoverable="true">
+    <Card title="开始" :hoverable="true" body-style="padding:10px" head-style="padding:10px;">
       <node-variable-display :has-input="true"
                              :has-output="false"
-                             :input-variables="data.inputVariables"></node-variable-display>
+                             :input-variables="data['startNodeData'].inputVariables"></node-variable-display>
     </Card>
 	</div>
 </template>

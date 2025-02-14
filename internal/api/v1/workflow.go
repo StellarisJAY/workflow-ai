@@ -5,6 +5,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 type WorkflowHandler struct {
@@ -22,9 +23,24 @@ func (w *WorkflowHandler) Start(c *gin.Context) {
 	if err := c.ShouldBindJSON(&request); err != nil {
 		panic(err)
 	}
-	err := w.service.Start(c, &request)
+	workflowId, err := w.service.Start(c, &request)
 	if err != nil {
 		panic(err)
 	}
-	c.JSON(200, common.NewSuccessResponse(nil))
+	c.JSON(200, common.NewSuccessResponse(struct {
+		WorkflowId int64 `json:"workflowId,string"`
+	}{WorkflowId: workflowId}))
+}
+
+func (w *WorkflowHandler) Outputs(c *gin.Context) {
+	param := c.Param("id")
+	workflowId, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	outputs, err := w.service.Outputs(c, workflowId)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(outputs))
 }

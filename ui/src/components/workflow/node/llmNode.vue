@@ -15,10 +15,10 @@ defineProps(['id', 'type', 'data', 'showControls']);
       <node-extra :id="id" :show-controls="showControls" :type="type" :data="data" title="大模型"/>
     </template>
     <FormItem label="模型">
-      {{data.modelName}}
+      {{data['llmNodeData']['modelName']}}
     </FormItem>
-    <node-variable-display :input-variables="data.inputVariables"
-                           :output-variables="data.outputVariables"
+    <node-variable-display :input-variables="data['llmNodeData'].inputVariables"
+                           :output-variables="data['llmNodeData'].outputVariables"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

@@ -4,6 +4,14 @@
     box-shadow: 0 0 4px rgb(120, 120, 120);
 }
 
+.vue-flow__node-start {
+    width: 200px;
+}
+
+.vue-flow__node-llm {
+    width: 300px;
+}
+
 .vue-flow__handle {
     background: #8d8dff;
     width: 20px;
