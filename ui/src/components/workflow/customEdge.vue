@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import {Button} from "ant-design-vue";
 
 const props = defineProps(['id', 'sourceX', 'sourceY', 'targetX', 'targetY', 'sourcePosition', 'targetPosition', 'markerStart']);
-const {removeEdges} = useVueFlow();
+const {removeEdges, edgesUpdatable} = useVueFlow();
 const path = computed(_=>getBezierPath(props));
 </script>
 
@@ -18,7 +18,7 @@ const path = computed(_=>getBezierPath(props));
         position: 'absolute',
         transform: `translate(-50%, -50%) translate(${path[1]}px,${path[2]}px)`,
       }">
-			<Button shape="circle" size="small" @click="removeEdges(id)">x</Button>
+			<Button shape="circle" size="small" @click="removeEdges(id)" v-if="edgesUpdatable">x</Button>
 		</div>
 	</EdgeLabelRenderer>
 </template>

@@ -51,3 +51,22 @@ func (tr *TemplateRepo) List(ctx context.Context, query *model.TemplateQuery) ([
 	}
 	return templates, nil
 }
+
+func (tr *TemplateRepo) Delete(ctx context.Context, id int64) error {
+	return tr.db.Table(templateTableName).
+		WithContext(ctx).
+		Where("id = ?", id).
+		Delete(&model.Template{}).
+		Error
+}
+
+func (tr *TemplateRepo) Update(ctx context.Context, template *model.Template) error {
+	return tr.db.Table(templateTableName).
+		WithContext(ctx).
+		Where("id = ?", template.Id).
+		UpdateColumns(map[string]interface{}{
+			"name":        template.Name,
+			"description": template.Description,
+			"data":        template.Data,
+		}).Error
+}

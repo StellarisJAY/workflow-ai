@@ -20,7 +20,9 @@ defineProps(['node', 'llmList', 'refOptions', 'llmOptions']);
                  :has-output="true"
                  :input-variables="node.data['llmNodeData'].inputVariables"
                  :output-variables="node.data['llmNodeData'].outputVariables"
-                 :ref-options="refOptions"/>
+                 :ref-options="refOptions"
+                 :input-editable="true"
+                 :output-editable="true"/>
 </template>
 
 <style scoped></style>

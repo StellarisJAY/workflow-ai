@@ -6,5 +6,14 @@ export default {
     },
     getTemplate: function(id) {
         return api.get("/template/detail/" + id);
+    },
+    listTemplate: function(query) {
+        return api.get("/template/list", query);
+    },
+    deleteTemplate: function(id) {
+        return api.delete("/template/" + id);
+    },
+    updateTemplate: function(template) {
+        return api.put("/template/update", template);
     }
 }

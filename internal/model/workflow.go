@@ -7,7 +7,7 @@ type WorkflowDefinition struct {
 }
 
 type StartWorkflowRequest struct {
-	TemplateId int64          `json:"templateId"`
+	TemplateId int64          `json:"templateId,string"`
 	Inputs     map[string]any `json:"inputs"`
 	Definition string         `json:"definition"`
 }

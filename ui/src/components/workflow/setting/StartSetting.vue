@@ -10,7 +10,9 @@ defineProps(['node']);
                  :has-input="true"
                  :has-output="false"
                  :allow-ref="false"
-                 :node-id="node.id"/>
+                 :node-id="node.id"
+                 :input-editable="true"
+                 :output-editable="false"/>
 </template>
 
 <style scoped></style>

@@ -3,7 +3,7 @@ package model
 import "time"
 
 type Template struct {
-	Id          int64     `json:"id"`
+	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Data        string    `json:"data"`
@@ -12,7 +12,7 @@ type Template struct {
 }
 
 type TemplateDetailDTO struct {
-	Id          int64     `json:"id"`
+	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Data        string    `json:"data"`
@@ -23,7 +23,7 @@ type TemplateDetailDTO struct {
 }
 
 type TemplateListDTO struct {
-	Id          int64     `json:"id"`
+	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	AddTime     time.Time `json:"addTime"`
 	AddUser     int64     `json:"addUser"`

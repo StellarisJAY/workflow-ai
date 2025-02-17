@@ -44,3 +44,38 @@ func (w *WorkflowHandler) Outputs(c *gin.Context) {
 	}
 	c.JSON(200, common.NewSuccessResponse(outputs))
 }
+
+func (w *WorkflowHandler) List(c *gin.Context) {
+	list, total, err := w.service.ListWorkflowInstance(c)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponseWithTotal(list, total))
+}
+
+func (w *WorkflowHandler) GetDetail(c *gin.Context) {
+	workflowId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	detail, err := w.service.GetWorkflowInstanceDetail(c, workflowId)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(detail))
+}
+
+func (w *WorkflowHandler) GetNodeInstanceDetail(c *gin.Context) {
+	var query struct {
+		WorkflowId int64  `form:"workflowId"`
+		NodeId     string `form:"nodeId"`
+	}
+	if err := c.ShouldBindQuery(&query); err != nil {
+		panic(err)
+	}
+	instance, err := w.service.GetNodeInstance(c, query.WorkflowId, query.NodeId)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(instance))
+}

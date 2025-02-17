@@ -65,3 +65,54 @@ func (w *WorkflowService) Outputs(ctx context.Context, workflowId int64) ([]*mod
 	}
 	return nodeOutputs, nil
 }
+
+func (w *WorkflowService) ListWorkflowInstance(ctx context.Context) ([]*model.WorkflowInstanceListDTO, int, error) {
+	instanceList, err := w.instanceRepo.ListWorkflowInstance(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, instance := range instanceList {
+		instance.StatusName = instance.Status.String()
+		instance.Duration = instance.CompleteTime.Sub(instance.AddTime).String()
+	}
+	return instanceList, len(instanceList), nil
+}
+
+func (w *WorkflowService) GetWorkflowInstanceDetail(ctx context.Context, workflowId int64) (*model.WorkflowInstanceDetailDTO, error) {
+	instance, err := w.instanceRepo.GetWorkflowInstanceDetail(ctx, workflowId)
+	if err != nil {
+		return nil, err
+	}
+	instance.StatusName = instance.Status.String()
+	instance.Duration = instance.CompleteTime.Sub(instance.AddTime).String()
+	nodeStatusList, err := w.instanceRepo.ListNodeInstanceStatus(ctx, workflowId)
+	if err != nil {
+		return nil, err
+	}
+	for _, nodeStatus := range nodeStatusList {
+		nodeStatus.StatusName = nodeStatus.Status.String()
+	}
+	instance.NodeStatusList = nodeStatusList
+	return instance, nil
+}
+
+func (w *WorkflowService) GetNodeInstance(ctx context.Context, workflowId int64, nodeId string) (*model.NodeInstanceDetailDTO, error) {
+	instance, err := w.instanceRepo.GetNodeInstanceByNodeId(ctx, workflowId, nodeId)
+	if err != nil {
+		return nil, err
+	}
+	if instance == nil {
+		return nil, errors.New("node instance not found")
+	}
+	return &model.NodeInstanceDetailDTO{
+		Id:           instance.Id,
+		NodeId:       instance.NodeId,
+		Type:         instance.Type,
+		AddTime:      instance.AddTime,
+		CompleteTime: instance.CompleteTime,
+		Status:       instance.Status,
+		StatusName:   instance.Status.String(),
+		Output:       instance.Output,
+		Error:        instance.Error,
+	}, nil
+}

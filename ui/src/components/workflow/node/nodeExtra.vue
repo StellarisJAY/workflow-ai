@@ -1,19 +1,34 @@
 <script setup>
-import { DeleteOutlined } from '@ant-design/icons-vue';
+import { EllipsisOutlined }
+  from '@ant-design/icons-vue';
 import { useVueFlow } from '@vue-flow/core';
-import { Button } from 'ant-design-vue';
+import { Dropdown, Menu, MenuItem } from 'ant-design-vue';
+import NodeStatusTag from "./nodeStatusTag.vue";
 
-defineProps(['id', 'type', 'data', 'showControls', 'title']);
-const { removeNodes } = useVueFlow();
+const props = defineProps(['id', 'type', 'data', 'status', 'editable']);
+const { removeNodes, nodesDraggable, nodesConnectable} = useVueFlow();
 function removeNode(id) {
   removeNodes(id);
 }
 </script>
 
 <template>
-    <Button type="primary" danger shape="circle" size="small" @click="removeNode(id)">
-      <DeleteOutlined/>
-    </Button>
+  <Dropdown v-if="nodesDraggable && nodesConnectable && editable">
+    <a class="ant-dropdown-link" @click.prevent>
+      <EllipsisOutlined />
+    </a>
+    <template #overlay>
+      <Menu>
+        <MenuItem @click="removeNode(id)">
+          删除
+        </MenuItem>
+        <MenuItem>
+          复制
+        </MenuItem>
+      </Menu>
+    </template>
+  </Dropdown>
+  <NodeStatusTag v-if="!nodesDraggable && !nodesConnectable" :status="status"/>
 </template>
 
 <style scoped></style>

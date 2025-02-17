@@ -1,15 +1,21 @@
 <script setup>
-import { Handle, Position } from '@vue-flow/core';
+import {Handle, Position, useVueFlow} from '@vue-flow/core';
 import {Card} from "ant-design-vue";
 import NodeVariableDisplay from "./nodeVariableDisplay.vue";
+import NodeExtra from "./nodeExtra.vue";
 
-defineProps(['id', 'type', 'data']);
+const props = defineProps(['id', 'type', 'data']);
+const {findNode} = useVueFlow();
+const node = findNode(props.id);
 </script>
 
 <template>
 	<div>
 		<Handle type="target" :position="Position.Right" :connectable="true"></Handle>
     <Card title="开始" :hoverable="true" body-style="padding:10px" head-style="padding:10px;">
+      <template #extra>
+        <node-extra :editable="false" :status="node.status"></node-extra>
+      </template>
       <node-variable-display :has-input="true"
                              :has-output="false"
                              :input-variables="data['startNodeData'].inputVariables"></node-variable-display>

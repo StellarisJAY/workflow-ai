@@ -72,16 +72,18 @@ func (r *Router) Init() error {
 		template := v1.Group("/template")
 		{
 			template.POST("/create", templateHandler.Create)
-			template.DELETE("/delete", nil)
-			template.PUT("/update", nil)
+			template.DELETE("/:id", templateHandler.Delete)
+			template.PUT("/update", templateHandler.Update)
 			template.GET("/detail/:id", templateHandler.GetDetail)
 			template.GET("/list", templateHandler.List)
 		}
 		wf := v1.Group("/workflow")
 		{
 			wf.POST("/start", workflowHandler.Start)
-			wf.GET("/detail/:id", workflowHandler.Outputs)
+			wf.GET("/detail/:id", workflowHandler.GetDetail)
 			wf.GET("/outputs/:id", workflowHandler.Outputs)
+			wf.GET("/list", workflowHandler.List)
+			wf.GET("/node/detail", workflowHandler.GetNodeInstanceDetail)
 		}
 	}
 	return nil

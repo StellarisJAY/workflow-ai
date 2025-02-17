@@ -110,3 +110,33 @@ func (i *InstanceRepo) GetWorkflowDefinition(ctx context.Context, workflowId int
 		Scan(&definition).Error
 	return definition, err
 }
+
+func (i *InstanceRepo) ListWorkflowInstance(ctx context.Context) ([]*model.WorkflowInstanceListDTO, error) {
+	var result []*model.WorkflowInstanceListDTO
+	err := i.DB(ctx).Table(WorkflowInstanceTableName + " wi").
+		Joins("LEFT JOIN wf_template wt ON wt.id = wi.template_id").
+		Select("wi.id, wi.template_id, wi.add_time, wi.complete_time, wi.status, wi.add_user, wt.name AS template_name").
+		WithContext(ctx).
+		Scan(&result).Error
+	return result, err
+}
+
+func (i *InstanceRepo) GetWorkflowInstanceDetail(ctx context.Context, workflowId int64) (*model.WorkflowInstanceDetailDTO, error) {
+	var result *model.WorkflowInstanceDetailDTO
+	err := i.DB(ctx).Table(WorkflowInstanceTableName+" wi").
+		Joins("LEFT JOIN wf_template wt ON wt.id = wi.template_id").
+		Select("wi.id, wi.data, wi.template_id, wi.add_time, wi.complete_time, wi.status, wi.add_user, wt.name AS template_name").
+		Where("wi.id = ?", workflowId).
+		WithContext(ctx).
+		Find(&result).Error
+	return result, err
+}
+
+func (i *InstanceRepo) ListNodeInstanceStatus(ctx context.Context, workflowId int64) ([]*model.NodeStatusDTO, error) {
+	var result []*model.NodeStatusDTO
+	err := i.DB(ctx).Table(NodeInstanceTableName).Select("id, node_id, status").
+		WithContext(ctx).
+		Where("workflow_id =?", workflowId).
+		Scan(&result).Error
+	return result, err
+}

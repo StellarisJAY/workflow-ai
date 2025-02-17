@@ -1,10 +1,12 @@
 <script setup>
-import { Handle, Position } from '@vue-flow/core';
+import {Handle, Position, useVueFlow} from '@vue-flow/core';
 import {FormItem, Card} from "ant-design-vue";
 import NodeExtra from "./nodeExtra.vue";
 import NodeVariableDisplay from "./nodeVariableDisplay.vue";
 
-defineProps(['id', 'type', 'data', 'showControls']);
+const props = defineProps(['id', 'type', 'data']);
+const {findNode} = useVueFlow();
+const node = findNode(props.id);
 </script>
 
 <template>
@@ -12,7 +14,7 @@ defineProps(['id', 'type', 'data', 'showControls']);
 	<Handle type="target" :position="Position.Right"></Handle>
   <Card title="大模型" :hoverable="true">
     <template #extra>
-      <node-extra :id="id" :show-controls="showControls" :type="type" :data="data" title="大模型"/>
+      <node-extra :id="id" :type="type" :data="data" :status="node.status" :editable="true"/>
     </template>
     <FormItem label="模型">
       {{data['llmNodeData']['modelName']}}

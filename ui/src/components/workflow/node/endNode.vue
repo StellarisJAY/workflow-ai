@@ -1,10 +1,9 @@
 <script setup>
-import { Handle, Position } from '@vue-flow/core';
+import {Handle, Position} from '@vue-flow/core';
 import {Card} from "ant-design-vue";
 import NodeVariableDisplay from "./nodeVariableDisplay.vue";
 
-defineProps(['id', 'type', 'data']);
-
+const props = defineProps(['id', 'type', 'data']);
 </script>
 
 <template>
