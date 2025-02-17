@@ -3,8 +3,9 @@ import {useRoute, useRouter} from "vue-router";
 import {onMounted, ref} from "vue";
 import templateAPI from "../../api/template.js";
 import {Card, List, ListItem, Pagination, Dropdown, Menu, MenuItem, Popconfirm, message,
-  PageHeader, Button} from "ant-design-vue";
+  PageHeader, Button, Drawer, Form, FormItem, Input} from "ant-design-vue";
 import {EditOutlined, PlayCircleOutlined, EllipsisOutlined} from "@ant-design/icons-vue";
+import workflowAPI from "../../api/workflow.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -14,6 +15,9 @@ const query = ref({
   pageSize: 2,
 });
 const total = ref(0);
+const executeInputOpen = ref(false);
+const executeInputVars = ref([]);
+const startingTemplateId = ref("");
 
 function listTemplates() {
   templateAPI.listTemplate(query).then(resp=>{
@@ -39,6 +43,29 @@ function openNewTemplate() {
   router.push('/editor/new');
 }
 
+function openExecuteInputVariableDrawer(id) {
+  templateAPI.getInputVariables(id).then(resp=>{
+    executeInputVars.value = resp.data;
+    startingTemplateId.value = id;
+    executeInputOpen.value = true;
+  });
+}
+
+function startWorkflow() {
+  const input = {};
+  executeInputVars.value.forEach((item) => {
+    input[item.name] = item.value;
+  });
+  const request = {
+    inputs: input,
+    templateId: startingTemplateId.value,
+  };
+  console.log(request);
+  workflowAPI.start(request).then(resp=>{
+    message.success("开始执行成功");
+  });
+}
+
 onMounted(_=>{
   listTemplates();
 });
@@ -55,7 +82,7 @@ onMounted(_=>{
       <ListItem>
         <Card :title="item.name">
           <template #actions>
-            <PlayCircleOutlined />
+            <PlayCircleOutlined @click="openExecuteInputVariableDrawer(item.id)" />
             <EditOutlined @click="openEditor(item.id)"/>
           </template>
           <template #extra>
@@ -83,6 +110,14 @@ onMounted(_=>{
     </template>
   </List>
   <Pagination :current="query.page" :page-size="query.pageSize" :total="total"></Pagination>
+  <Drawer title="输入变量" :open="executeInputOpen" @close="_=>{executeInputOpen = false;}">
+    <Form>
+      <FormItem v-for="variable in executeInputVars" :label="variable.name">
+        <Input v-model:value="variable.value" v-if="variable.type === 'string'" placeholder="变量值"/>
+      </FormItem>
+    </Form>
+    <Button type="primary" @click="startWorkflow">执行流程</Button>
+  </Drawer>
 </template>
 
 <style scoped>

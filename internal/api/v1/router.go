@@ -76,6 +76,7 @@ func (r *Router) Init() error {
 			template.PUT("/update", templateHandler.Update)
 			template.GET("/detail/:id", templateHandler.GetDetail)
 			template.GET("/list", templateHandler.List)
+			template.GET("/start-variables/:id", templateHandler.GetStartInputVariables)
 		}
 		wf := v1.Group("/workflow")
 		{

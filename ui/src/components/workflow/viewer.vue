@@ -74,7 +74,9 @@ function nodeClickHandler(event) {
   workflowAPI.getNodeInstanceDetail(props.workflowId, node.id).then(resp=>{
     currentNode.value = node;
     currentNodeInstance.value = resp.data;
-    currentNodeOutput.value = JSON.parse(currentNodeInstance.value.output);
+    if (currentNodeInstance.value.output) {
+      currentNodeOutput.value = JSON.parse(currentNodeInstance.value.output);
+    }
     nodeDetailOpen.value = true;
   });
 }

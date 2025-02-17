@@ -34,6 +34,7 @@ type Node struct {
 		RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
 		StartNodeData                 *StartNodeData                 `json:"startNodeData"`
 		EndNodeData                   *EndNodeData                   `json:"endNodeData"`
+		CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`
 	} `json:"data"`
 }
 
@@ -65,11 +66,17 @@ type StartNodeData struct {
 }
 
 type Variable struct {
-	Type  string `json:"type"`  // 变量类型
-	Name  string `json:"name"`  // 变量名
-	Value string `json:"value"` // 变量值
+	Type      string `json:"type"`      // 变量类型
+	Name      string `json:"name"`      // 变量名
+	Value     string `json:"value"`     // 变量值
+	MustExist bool   `json:"mustExist"` // 是否必须存在
 }
 
 type EndNodeData struct {
 	OutputVariables []*Variable `json:"outputVariables"` // 输出变量列表 key: 变量名，value: 变量来源 {{nodeId.xxx}}
+}
+
+type CrawlerNodeData struct {
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
 }

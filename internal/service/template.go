@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/bwmarrin/snowflake"
+	"slices"
 	"time"
 )
 
@@ -49,4 +51,23 @@ func (t *TemplateService) Delete(ctx context.Context, id int64) error {
 
 func (t *TemplateService) Update(ctx context.Context, template *model.Template) error {
 	return t.repo.Update(ctx, template)
+}
+
+func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) ([]*model.Variable, error) {
+	detail, err := t.repo.GetDetail(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if detail == nil {
+		return nil, errors.New("not found")
+	}
+	var definition model.WorkflowDefinition
+	_ = json.Unmarshal([]byte(detail.Data), &definition)
+	idx := slices.IndexFunc(definition.Nodes, func(node *model.Node) bool {
+		return node.Type == string(model.NodeTypeStart)
+	})
+	if idx == -1 {
+		return nil, errors.New("无效的流程定义")
+	}
+	return definition.Nodes[idx].Data.StartNodeData.InputVariables, nil
 }

@@ -13,7 +13,10 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/prompts"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -168,6 +171,8 @@ func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.
 			if value, ok := inputMap[originVarName]; ok {
 				result[variable.Name] = value
 			}
+		} else if variable.Type == string(model.VariableTypeString) {
+			result[variable.Name] = variable.Value
 		}
 	}
 	return result, nil
@@ -186,7 +191,9 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		}
 		go func() {
 			e.executeLLMNode(ctx, node, nodeInstance, llmNodeData, inputMap)
-			e.createNextNode(ctx, node, nodeInstance)
+			if nodeInstance.Status != model.NodeInstanceStatusFailed {
+				e.createNextNode(ctx, node, nodeInstance)
+			}
 		}()
 	case string(model.NodeTypeEnd):
 		endNodeData := node.Data.EndNodeData
@@ -194,6 +201,22 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			return fmt.Errorf("invalid end node data")
 		}
 		e.executeEndNode(ctx, node, nodeInstance, endNodeData)
+
+	case string(model.NodeTypeCrawler):
+		crawlerNodeData := node.Data.CrawlerNodeData
+		if crawlerNodeData == nil {
+			return fmt.Errorf("invalid crawler node data")
+		}
+		inputMap, err := e.LookupInputVariables(ctx, crawlerNodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			return err
+		}
+		go func() {
+			e.executeCrawlerNode(ctx, node, nodeInstance, crawlerNodeData, inputMap)
+			if nodeInstance.Status != model.NodeInstanceStatusFailed {
+				e.createNextNode(ctx, node, nodeInstance)
+			}
+		}()
 	}
 	return nil
 }
@@ -333,5 +356,55 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 		CompleteTime: time.Now(),
 	}); err != nil {
 		log.Println("update workflow instance error:", err)
+	}
+}
+
+func (e *Engine) executeCrawlerNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
+	crawlerData *model.CrawlerNodeData, inputMap map[string]any) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := r.(error)
+			nodeInstance.Status = model.NodeInstanceStatusFailed
+			nodeInstance.CompleteTime = time.Now()
+			nodeInstance.Error = err.Error()
+			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
+				log.Println("update node instance error:", err)
+			}
+		}
+	}()
+	urlStr, ok := inputMap["url"]
+	if !ok {
+		panic(errors.New("url参数不存在"))
+	}
+	u, err := url.Parse(urlStr.(string))
+	if err != nil {
+		panic(err)
+	}
+	// 执行爬虫
+	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		panic(err)
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	if response.StatusCode != 200 {
+		panic(errors.New("爬虫请求失败"))
+	}
+	bytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		panic(err)
+	}
+	// 保存爬虫结果
+	result := map[string]string{
+		"content": string(bytes),
+	}
+	outputs, _ := json.Marshal(result)
+	nodeInstance.Output = string(outputs)
+	nodeInstance.Status = model.NodeInstanceStatusCompleted
+	nodeInstance.CompleteTime = time.Now()
+	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
+		log.Println("update node instance error:", err)
 	}
 }

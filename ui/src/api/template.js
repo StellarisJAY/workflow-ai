@@ -15,5 +15,8 @@ export default {
     },
     updateTemplate: function(template) {
         return api.put("/template/update", template);
+    },
+    getInputVariables: function(templateId) {
+        return api.get("/template/start-variables/" + templateId);
     }
 }

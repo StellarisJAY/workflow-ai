@@ -77,3 +77,16 @@ func (t *TemplateHandler) Update(c *gin.Context) {
 	}
 	c.JSON(200, common.NewSuccessResponse(nil))
 }
+
+func (t *TemplateHandler) GetStartInputVariables(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	variables, err := t.service.GetStartInputVariables(c, id)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(variables))
+}
