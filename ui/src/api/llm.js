@@ -7,4 +7,7 @@ export default {
     getModelDetail: function(id) {
         return api.get("/model/detail/"+id);
     },
+    createModel: function(data) {
+        return api.post("/model/create",data);
+    }
 }

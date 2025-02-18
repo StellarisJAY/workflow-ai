@@ -60,9 +60,10 @@ function startWorkflow() {
     inputs: input,
     templateId: startingTemplateId.value,
   };
-  console.log(request);
   workflowAPI.start(request).then(resp=>{
     message.success("开始执行成功");
+    const workflowId = resp.data['workflowId'];
+    router.push("/view/"+workflowId);
   });
 }
 

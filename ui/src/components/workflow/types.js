@@ -30,20 +30,35 @@ const nodeTypeOptions = ref([
     { value: "crawler", label: "爬虫", description: "从给定地址爬取文本内容"},
 ]);
 
+const llmOutputFormatOptions = [
+    {label: "JSON", value: "JSON"},
+    {label: "TEXT", value: "TEXT"},
+];
+
 function initLLMNodeData() {
     return {
+        name: "大模型",
         llmNodeData: {
             inputVariables: [{name:"input",type:"string",value:""}],
             outputVariables: [{name: "output", type: "string", value: ""}],
+            temperature: 0.5,
+            topP: 0.5,
+            outputFormat: "TEXT",
         }
     };
 }
 
 function initCrawlerNodeData() {
     return {
+        name: "爬虫",
         crawlerNodeData: {
             inputVariables: [{name:"url",type:"string",value:"",mustExist: true}],
-            outputVariables: [{name:"content",type:"string",value: "",mustExist: true}],
+            outputVariables: [
+                {name:"data",type:"string",value: "",mustExist: true},
+                {name:"message",type:"string",value: "",mustExist: true},
+                {name:"code", type:"string",value:"",mustExist: true},
+                {name:"contentType", type:"string",value:"",mustExist: true},
+            ],
         }
     }
 }
@@ -65,4 +80,5 @@ export default {
     nodeTypeOptions: nodeTypeOptions,
     initLLMNodeData: initLLMNodeData,
     createNodeData: createNodeData,
+    llmOutputFormatOptions: llmOutputFormatOptions,
 };

@@ -1,8 +1,8 @@
 <script setup>
 import {ref, watch} from 'vue'
-import { Panel, ConnectionMode, Position, useVueFlow, VueFlow, MarkerType } from '@vue-flow/core'
-import { Background } from '@vue-flow/background';
-import {Button, PageHeader, Select, Modal, Drawer, Input, message} from 'ant-design-vue';
+import {ConnectionMode, MarkerType, Panel, Position, useVueFlow, VueFlow} from '@vue-flow/core'
+import {Background} from '@vue-flow/background';
+import {Button, Drawer, Input, message, Modal, PageHeader, Select} from 'ant-design-vue';
 import llmAPI from '../../api/llm';
 import templateAPI from '../../api/template.js';
 import workflowAPI from '../../api/workflow.js';
@@ -35,8 +35,8 @@ if (props.isNewTemplate) {
       id: "start",
       type: "start",
       position: { x: 100, y: 100 },
-      name: "开始",
       data: {
+        name: "开始",
         startNodeData: {
           inputVariables: [
             {name: "input", type: "string", "value": ""}
@@ -47,9 +47,9 @@ if (props.isNewTemplate) {
     {
       id: "end",
       type: "end",
-      name: "结束",
       position: { x: 200, y: 100 },
       data: {
+        name: "结束",
         endNodeData: {
           outputVariables: [
             {name: "output", type: "string", value: ""}
@@ -81,6 +81,7 @@ const startDrawerOpen = ref(false);
 const endDrawerOpen = ref(false);
 const crawlerDrawerOpen = ref(false);
 const currentSettingNode = ref({});
+const currentSettingNodes = ref({});
 
 const llmList = ref([]);
 const llmOptions = ref([]);
@@ -88,9 +89,10 @@ const settingRefOptions = ref([]);
 
 // 点击节点，弹出侧边设置
 onNodeClick(event => {
-	currentSettingNode.value = event.node;
-  settingRefOptions.value = getPrevNodesOutputs();
-	switch (event.node.type) {
+  const curNode = event.node;
+  settingRefOptions.value = getPrevNodesOutputs(curNode);
+  currentSettingNodes.value[curNode.type] = curNode;
+	switch (curNode.type) {
 		case "llm": prepareLLMOptions(); break;
 		case "knowledgeRetrieval": knowledgeRetrievalDrawerOpen.value = true; break;
 		case "knowledgeWrite": knowledgeWriteDrawerOpen.value = true; break;
@@ -186,8 +188,7 @@ function saveTemplate() {
 }
 
 function updateTemplate() {
-  const data = getJSON();
-  props.template.data = data;
+  props.template.data = getJSON();
   templateAPI.updateTemplate(props.template).then(resp=>{
     message.success("更新成功");
   }).catch(_=>{
@@ -195,8 +196,8 @@ function updateTemplate() {
   })
 }
 // 获取前驱节点的输出变量列表
-function getPrevNodesOutputs() {
-  const prevNodes = NodeUtil.getPrevNodes(currentSettingNode.value.id, nodes.value, edges.value);
+function getPrevNodesOutputs(currNode) {
+  const prevNodes = NodeUtil.getPrevNodes(currNode.id, nodes.value, edges.value);
   let options = [];
   prevNodes.forEach(node=>{
     if (!node.data) return;
@@ -209,7 +210,7 @@ function getPrevNodesOutputs() {
     }
     if (outputVariables) {
       let option = {
-        label: node.name,
+        label: node.data['name'],
         value: node.id,
         children: []
       };
@@ -293,23 +294,23 @@ function getExecuteOutputs(workflowId) {
 		</template>
 	</Modal>
 
-	<Drawer title="大模型配置" :open="llmDrawerOpen" @close="_=>{llmDrawerOpen = false;}">
-    <LlmSetting v-model:node="currentSettingNode" :ref-options="settingRefOptions"
+	<Drawer title="大模型配置" size="default" :open="llmDrawerOpen" @close="_=>{llmDrawerOpen = false;}">
+    <LlmSetting v-model:node="currentSettingNodes['llm']" :ref-options="settingRefOptions"
                 :llm-list="llmList" :llm-options="llmOptions"/>
 	</Drawer>
-	<Drawer title="知识库检索配置" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}"></Drawer>
-	<Drawer title="知识库写入配置" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
-  <Drawer title="开始配置" :open="startDrawerOpen" @close="_=>{startDrawerOpen = false;}">
-    <start-setting v-model:node="currentSettingNode"/>
+	<Drawer title="知识库检索配置" size="default" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}"></Drawer>
+	<Drawer title="知识库写入配置" size="default" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
+  <Drawer title="开始配置" size="default" :open="startDrawerOpen" @close="_=>{startDrawerOpen = false;}">
+    <start-setting v-model:node="currentSettingNodes['start']"/>
   </Drawer>
-  <Drawer title="结果配置" :open="endDrawerOpen" @close="_=>{endDrawerOpen = false;}">
-    <end-setting :output-variables="currentSettingNode.data['endNodeData'].outputVariables"
+  <Drawer title="结果配置" size="default" :open="endDrawerOpen" @close="_=>{endDrawerOpen = false;}">
+    <end-setting :output-variables="currentSettingNodes['end'].data['endNodeData'].outputVariables"
                  :ref-options="settingRefOptions" :node="currentSettingNode"/>
   </Drawer>
-  <Drawer title="爬虫配置" :open="crawlerDrawerOpen" @close="_=>{crawlerDrawerOpen = false;}">
-    <CrawlerSetting :ref-options="settingRefOptions" :node="currentSettingNode"/>
+  <Drawer title="爬虫配置" size="default" :open="crawlerDrawerOpen" @close="_=>{crawlerDrawerOpen = false;}">
+    <CrawlerSetting :ref-options="settingRefOptions" :node="currentSettingNodes['crawler']"/>
   </Drawer>
-  <Drawer title="执行结果" :open="executeLogDrawerOpen" @close="_=>{executeLogDrawerOpen = false;}">
+  <Drawer title="执行结果" size="default" :open="executeLogDrawerOpen" @close="_=>{executeLogDrawerOpen = false;}">
     <execution-log :outputs="executeOutputs"></execution-log>
   </Drawer>
 </template>

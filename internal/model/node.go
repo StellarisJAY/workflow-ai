@@ -18,17 +18,18 @@ const (
 	VariableTypeString VariableType = "string"
 	VariableTypeFile   VariableType = "file"
 	VariableTypeRef    VariableType = "ref" // 引用其他节点的变量, 值为 节点ID.变量名
+	VariableTypeArray  VariableType = "array"
 )
 
 type Node struct {
 	Id       string `json:"id"`   // 节点ID
 	Type     string `json:"type"` // 节点类型
-	Name     string `json:"name"`
 	Position struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
 	} `json:"position"` // 节点位置
 	Data struct {
+		Name                          string                         `json:"name"`
 		LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
 		KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`
 		RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
@@ -42,11 +43,12 @@ type Node struct {
 type LLMNodeData struct {
 	ModelName       string      `json:"model"`           // 模型名称
 	ModelId         int64       `json:"modelId,string"`  // 模型ID
-	SystemPrompt    string      `json:"systemPrompt"`    // 系统提示词
-	UserPrompt      string      `json:"userPrompt"`      // 用户提示词
+	Prompt          string      `json:"prompt"`          // 提示词
 	InputVariables  []*Variable `json:"inputVariables"`  // 输入变量列表, key:变量名，value：变量来源{{nodeId.xxx}}或空(运行时输入)
 	OutputFormat    string      `json:"outputFormat"`    // 输出格式 text,markdown,json
 	OutputVariables []*Variable `json:"outputVariables"` // 输出变量名列表
+	Temperature     float64     `json:"temperature"`     // 温度 0~2
+	TopP            float64     `json:"topP"`            // TopP 0~1
 }
 
 // KnowledgeBaseWriteNodeData 写入知识库节点数据

@@ -12,7 +12,7 @@ const node = findNode(props.id);
 <template>
   <Handle type="source" :position="Position.Left"></Handle>
   <Handle type="target" :position="Position.Right"></Handle>
-  <Card title="爬虫" :hoverable="true">
+  <Card :title="node.data['name']" :hoverable="true">
     <template #extra>
       <node-extra :id="id" :type="type" :data="data" :status="node.status" :editable="true"/>
     </template>

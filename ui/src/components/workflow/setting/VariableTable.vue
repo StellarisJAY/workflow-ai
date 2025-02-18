@@ -1,14 +1,24 @@
 <script setup>
 import {Input, List, ListItem, Button, Select, Cascader} from "ant-design-vue";
 const props = defineProps(['inputVariables', 'outputVariables', 'hasInput', 'hasOutput',
-  'allowRef', 'nodeId', 'refOptions', 'outputEditable', 'inputEditable']);
+  'allowRef', 'nodeId', 'refOptions', 'outputEditable', 'inputEditable', 'allowAddDelInput', 'allowAddDelOutput']);
 import {DeleteFilled} from "@ant-design/icons-vue";
+import {watch} from "vue";
 
 const typeOptions = [
   {label: "string", value: "string"},
   {label: "文件", value: "file"},
   {label: "引用", value: "ref"},
 ];
+
+watch(_=>props.inputVariables, ()=>{
+  props.inputVariables.forEach(variable => {
+    if (variable.type === "ref") {
+      variable['refOption'] = variable.value.split('.');
+    }
+  });
+});
+
 function onRefOptionChange(variable, ev) {
   variable.value = ev[0] + "." + ev[1];
 }
@@ -34,13 +44,13 @@ function removeVariable(target, name) {
       <Input v-if="variable.type === 'string' && inputEditable" v-model:value="variable.value" size="small" placeholder="值"></Input>
       <Cascader v-else-if="variable.type === 'ref' && inputEditable"
                 :options="refOptions" size="small"
-                @change="ev=>onRefOptionChange(variable, ev)"></Cascader>
+                @change="ev=>onRefOptionChange(variable, ev)" v-model:value="variable['refOption']"></Cascader>
       <Button size="small"
-              v-if="inputEditable && !variable.mustExist"
+              v-if="!variable.mustExist && allowAddDelInput"
               @click="removeVariable(inputVariables, variable.name)"><DeleteFilled/></Button>
     </ListItem>
     <ListItem>
-      <Button v-if="inputEditable" @click="addVariable(inputVariables)" size="mini">添加</Button>
+      <Button v-if="allowAddDelInput" @click="addVariable(inputVariables)" size="mini">添加</Button>
     </ListItem>
   </List>
   <h4 v-if="hasOutput">输出变量</h4>
@@ -53,10 +63,10 @@ function removeVariable(target, name) {
                 :options="refOptions" size="small"
                 @change="ev=>onRefOptionChange(variable, ev)"></Cascader>
       <Button size="small"
-              @click="removeVariable(outputVariables, variable.name)" v-if="outputEditable && !variable.mustExist"><DeleteFilled/></Button>
+              @click="removeVariable(outputVariables, variable.name)" v-if="allowAddDelOutput && !variable.mustExist"><DeleteFilled/></Button>
     </ListItem>
     <ListItem>
-      <Button @click="addVariable(outputVariables)" size="mini" v-if="outputEditable">添加</Button>
+      <Button @click="addVariable(outputVariables)" size="mini" v-if="allowAddDelOutput">添加</Button>
     </ListItem>
   </List>
 </template>

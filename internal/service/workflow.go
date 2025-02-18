@@ -59,7 +59,7 @@ func (w *WorkflowService) Outputs(ctx context.Context, workflowId int64) ([]*mod
 	}
 	for _, nodeOutput := range nodeOutputs {
 		if node, ok := nodeMap[nodeOutput.NodeId]; ok {
-			nodeOutput.NodeName = node.Name
+			nodeOutput.NodeName = node.Data.Name
 			nodeOutput.Type = node.Type
 		}
 	}

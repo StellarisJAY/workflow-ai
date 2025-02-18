@@ -34,6 +34,8 @@ const currentNodeOutput = ref({});
 
 const {onNodeClick} = useVueFlow();
 
+const queryInterval = ref(0);
+
 onMounted(_=>{
   getWorkflowDetail();
   getInstanceOutputs();
@@ -55,6 +57,11 @@ function getWorkflowDetail() {
         node.status = {id: 0, text: "未到达"};
       }
     });
+    if (queryInterval.value === 0 && workflowInstance.value.status === 0) {
+      queryInterval.value = setInterval(_=>getWorkflowDetail(), 3000);
+    } else if (queryInterval.value !== 0 && workflowInstance.value.status !== 0) {
+      clearInterval(queryInterval.value);
+    }
   });
 }
 
@@ -76,6 +83,8 @@ function nodeClickHandler(event) {
     currentNodeInstance.value = resp.data;
     if (currentNodeInstance.value.output) {
       currentNodeOutput.value = JSON.parse(currentNodeInstance.value.output);
+    } else {
+      currentNodeOutput.value = "";
     }
     nodeDetailOpen.value = true;
   });
@@ -123,7 +132,7 @@ function nodeClickHandler(event) {
       </FormItem>
     </Form>
     <h4 v-if="currentNodeInstance['error']">错误信息</h4>
-    <p v-if="currentNodeInstance['error']">{{currentNodeinstance['error']}}</p>
+    <p v-if="currentNodeInstance['error']">{{currentNodeInstance['error']}}</p>
   </Drawer>
 </template>
 

@@ -1,8 +1,23 @@
 <script setup>
 import {Button, Cascader, Input, List, ListItem, Select} from "ant-design-vue";
 import {DeleteFilled} from "@ant-design/icons-vue";
+import {watch} from "vue";
 
-defineProps(['node', 'outputVariables', 'refOptions']);
+const props = defineProps(['node', 'outputVariables', 'refOptions']);
+
+watch(_=>props.outputVariables, ()=>{
+  props.outputVariables.forEach(variable => {
+    if (variable.type === "ref") {
+      variable['refOption'] = variable.value.split('.');
+    }
+  });
+});
+
+props.outputVariables.forEach(variable => {
+  if (variable.type === "ref") {
+    variable['refOption'] = variable.value.split('.');
+  }
+});
 
 const typeOptions = [
   {label: "string", value: "string"},
@@ -31,7 +46,7 @@ function removeVariable(target, name) {
       <Input v-if="variable.type === 'string'" v-model:value="variable.value" size="small" placeholder="值"></Input>
       <Cascader v-else-if="variable.type === 'ref'"
                 :options="refOptions" size="small"
-                @change="ev=>onRefOptionChange(variable, ev)"></Cascader>
+                @change="ev=>onRefOptionChange(variable, ev)" v-model:value="variable.refOption"></Cascader>
       <Button size="small"
               @click="removeVariable(outputVariables, variable.name)"><DeleteFilled/></Button>
     </ListItem>

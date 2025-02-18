@@ -13,10 +13,7 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/prompts"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -100,52 +97,6 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	return instance.Id, nil
 }
 
-//func (e *Engine) getInputMap(node *model.Node, workflowInstanceId int64) (map[string]any, error) {
-//	var inputVariables map[string]string
-//	switch model.NodeType(node.Type) {
-//	case model.NodeTypeLLM:
-//		inputVariables = node.Data.LLMNodeData.InputVariables
-//	}
-//	return e.findVariables(inputVariables, workflowInstanceId)
-//}
-//
-//func (e *Engine) findVariables(variables map[string]string, workflowInstanceId int64) (map[string]any, error) {
-//	result := make(map[string]any)
-//	// 匹配{{来源变量名}}
-//	regex := regexp.MustCompile("{{[^}]+}}")
-//	for name, origin := range variables {
-//		// 直接输入值的变量
-//		if !regex.MatchString(origin) {
-//			result[name] = origin
-//			continue
-//		}
-//		// 需要从来源获取值的变量
-//		origin = strings.TrimPrefix(origin, "{{")
-//		origin = strings.TrimSuffix(origin, "}}")
-//		parts := strings.Split(origin, ".")
-//		if len(parts) != 2 {
-//			return nil, errors.New("变量来源格式错误")
-//		}
-//		originNodeId, originVarName := parts[0], parts[1]
-//		originNode, _ := e.instanceRepo.GetNodeInstanceByNodeId(context.Background(), workflowInstanceId, originNodeId)
-//		if originNode == nil {
-//			continue
-//		}
-//		originInputVars := make(map[string]any)
-//		originOutputVars := make(map[string]any)
-//		_ = json.Unmarshal([]byte(originNode.Input), &originInputVars)
-//		_ = json.Unmarshal([]byte(originNode.Output), &originOutputVars)
-//		if value, ok := originInputVars[originVarName]; ok {
-//			result[name] = value
-//			continue
-//		}
-//		if value, ok := originOutputVars[originVarName]; ok {
-//			result[name] = value
-//		}
-//	}
-//	return result, nil
-//}
-
 func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.Variable, workflowId int64) (map[string]any, error) {
 	result := make(map[string]any)
 	nodeInstancesCache := make(map[string]*model.NodeInstance)
@@ -190,9 +141,11 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			return err
 		}
 		go func() {
-			e.executeLLMNode(ctx, node, nodeInstance, llmNodeData, inputMap)
+			e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
 			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.createNextNode(ctx, node, nodeInstance)
+				e.createNextNode(context.TODO(), node, nodeInstance)
+			} else {
+				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 			}
 		}()
 	case string(model.NodeTypeEnd):
@@ -200,7 +153,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		if endNodeData == nil {
 			return fmt.Errorf("invalid end node data")
 		}
-		e.executeEndNode(ctx, node, nodeInstance, endNodeData)
+		e.executeEndNode(context.TODO(), node, nodeInstance, endNodeData)
 
 	case string(model.NodeTypeCrawler):
 		crawlerNodeData := node.Data.CrawlerNodeData
@@ -212,13 +165,25 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			return err
 		}
 		go func() {
-			e.executeCrawlerNode(ctx, node, nodeInstance, crawlerNodeData, inputMap)
+			e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
 			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.createNextNode(ctx, node, nodeInstance)
+				e.createNextNode(context.TODO(), node, nodeInstance)
+			} else {
+				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 			}
 		}()
 	}
 	return nil
+}
+
+func (e *Engine) UpdateWorkflowFailed(ctx context.Context, workflowId int64) {
+	if err := e.instanceRepo.UpdateWorkflowInstance(ctx, &model.WorkflowInstance{
+		Id:           workflowId,
+		Status:       model.WorkflowInstanceStatusFailed,
+		CompleteTime: time.Now(),
+	}); err != nil {
+		log.Println("update workflow instance error:", err)
+	}
 }
 
 func (e *Engine) createNextNode(ctx context.Context, currNode *model.Node, currNodeInstance *model.NodeInstance) {
@@ -293,7 +258,8 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 			openai.WithResponseFormat(openai.ResponseFormatJSON))
 	case model.ApiTypeOllama:
 		llm, err = ollama.New(ollama.WithServerURL(detail.BaseUrl),
-			ollama.WithModel(detail.Code), ollama.WithFormat("json"))
+			ollama.WithModel(detail.Code),
+			ollama.WithFormat("json"))
 	default:
 		panic(errors.New("不支持的大模型类型"))
 	}
@@ -307,15 +273,31 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	for _, variable := range llmNodeData.InputVariables {
 		inputVariables = append(inputVariables, variable.Name)
 	}
-	prompt := prompts.NewPromptTemplate(llmNodeData.UserPrompt, inputVariables)
+	prompt := prompts.NewPromptTemplate(llmNodeData.Prompt, inputVariables)
 	// 创建langchain，调用大模型API
 	chain := chains.NewLLMChain(llm, prompt)
-	response, err := chain.Call(context.TODO(), inputMap)
+	response, err := chain.Call(context.TODO(), inputMap,
+		chains.WithTemperature(llmNodeData.Temperature),
+		chains.WithTopP(llmNodeData.TopP))
 	if err != nil {
 		panic(err)
 	}
 	// 将大模型输出结果写入节点实例，修改节点实例为完成状态
 	output := response[chain.OutputKey].(string)
+	// llm可能输出markdown格式，需要去除代码块前缀后缀
+	if llmNodeData.OutputFormat == "JSON" {
+		output = strings.TrimPrefix(output, "```json")
+		output = strings.TrimSuffix(output, "```")
+		output = strings.TrimSpace(output)
+	} else if llmNodeData.OutputFormat == "TEXT" {
+		// 文本格式输出，需要转换成与输出变量表对于的JSON格式
+		for _, variable := range llmNodeData.OutputVariables {
+			if variable.Type == string(model.VariableTypeString) {
+				output = fmt.Sprintf("{\"%s\":\"%s\"}", variable.Name, output)
+				break
+			}
+		}
+	}
 	nodeInstance.Output = output
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
@@ -356,55 +338,5 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 		CompleteTime: time.Now(),
 	}); err != nil {
 		log.Println("update workflow instance error:", err)
-	}
-}
-
-func (e *Engine) executeCrawlerNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
-	crawlerData *model.CrawlerNodeData, inputMap map[string]any) {
-	defer func() {
-		if r := recover(); r != nil {
-			err := r.(error)
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-		}
-	}()
-	urlStr, ok := inputMap["url"]
-	if !ok {
-		panic(errors.New("url参数不存在"))
-	}
-	u, err := url.Parse(urlStr.(string))
-	if err != nil {
-		panic(err)
-	}
-	// 执行爬虫
-	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		panic(err)
-	}
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		panic(err)
-	}
-	if response.StatusCode != 200 {
-		panic(errors.New("爬虫请求失败"))
-	}
-	bytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		panic(err)
-	}
-	// 保存爬虫结果
-	result := map[string]string{
-		"content": string(bytes),
-	}
-	outputs, _ := json.Marshal(result)
-	nodeInstance.Output = string(outputs)
-	nodeInstance.Status = model.NodeInstanceStatusCompleted
-	nodeInstance.CompleteTime = time.Now()
-	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-		log.Println("update node instance error:", err)
 	}
 }

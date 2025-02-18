@@ -4,6 +4,7 @@ import {ref} from "vue";
 import {Layout, LayoutSider, Menu, MenuItem, LayoutContent, Card} from "ant-design-vue";
 import TemplateList from "../components/template/templateList.vue";
 import InstanceList from "../components/instance/instanceList.vue";
+import LlmList from "../components/llm/llmList.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -35,6 +36,7 @@ const selectedKeys = ref(['1']);
     <LayoutContent has-sider>
       <Card style="min-height: 100vh">
         <template-list v-if="selectedKeys[0] === '1'"/>
+        <llm-list v-if="selectedKeys[0] === '2'"></llm-list>
         <instance-list v-else-if="selectedKeys[0] === '5'"/>
       </Card>
     </LayoutContent>

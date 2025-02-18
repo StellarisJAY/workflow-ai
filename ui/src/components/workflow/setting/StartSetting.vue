@@ -12,7 +12,7 @@ defineProps(['node']);
                  :allow-ref="false"
                  :node-id="node.id"
                  :input-editable="true"
-                 :output-editable="false"/>
+                 :output-editable="false" :allow-add-del-input="true"/>
 </template>
 
 <style scoped></style>
