@@ -14,9 +14,10 @@
 
 .vue-flow__handle {
     background: #8d8dff;
-    width: 20px;
-    height: 20px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    color: white;
 }
 
 .vue-flow__node-start {

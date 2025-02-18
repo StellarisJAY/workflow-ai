@@ -14,6 +14,7 @@ import ExecutionLog from "../instance/executionLog.vue";
 import {useRoute, useRouter} from "vue-router";
 import types from "./types.js";
 import CrawlerSetting from "./setting/CrawlerSetting.vue";
+import ConditionSetting from "./setting/ConditionSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -80,6 +81,8 @@ const knowledgeWriteDrawerOpen = ref(false);
 const startDrawerOpen = ref(false);
 const endDrawerOpen = ref(false);
 const crawlerDrawerOpen = ref(false);
+const conditionDrawerOpen = ref(false);
+
 const currentSettingNode = ref({});
 const currentSettingNodes = ref({});
 
@@ -99,11 +102,15 @@ onNodeClick(event => {
     case "start": startDrawerOpen.value = true; break;
     case "end": endDrawerOpen.value = true; break;
     case "crawler": crawlerDrawerOpen.value = true; break;
+    case "condition": conditionDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
 onConnect(event => {
-  const exist = edges.value.find(e=>{return e['source'] === event['source'] && e['target'] === event['target']});
+  const exist = edges.value.find(e=>{return e['source'] === event['source'] &&
+      e['target'] === event['target'] &&
+      e['sourceHandle'] === event['sourceHandle'] &&
+      e['targetHandle'] === event['targetHandle']});
   if (exist) {
     return;
   }
@@ -113,10 +120,13 @@ onConnect(event => {
 		source: event.source,
 		target: event.target,
 		markerStart: MarkerType.ArrowClosed,
+    sourceHandle: event.sourceHandle,
+    targetHandle: event.targetHandle,
 	});
 });
 // 连线断开
 onEdgesChange(ev => {
+  console.log(ev);
 	ev.forEach(e => {
 		if (e.type === "remove") {
 			removeEdge(e.id);
@@ -312,6 +322,9 @@ function getExecuteOutputs(workflowId) {
   </Drawer>
   <Drawer title="执行结果" size="default" :open="executeLogDrawerOpen" @close="_=>{executeLogDrawerOpen = false;}">
     <execution-log :outputs="executeOutputs"></execution-log>
+  </Drawer>
+  <Drawer title="条件设置" size="large" :open="conditionDrawerOpen" @close="_=>{conditionDrawerOpen = false;}">
+    <ConditionSetting :ref-options="settingRefOptions" :node="currentSettingNodes['condition']"/>
   </Drawer>
 </template>
 

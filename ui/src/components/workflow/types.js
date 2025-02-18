@@ -63,16 +63,60 @@ function initCrawlerNodeData() {
     }
 }
 
+function initConditionNodeData() {
+    return {
+        name: "条件判断",
+        conditionNodeData: {
+            branches: [
+                {
+                    handle: "1",
+                    connector: "and",
+                    conditions: [
+                        {
+                            value1: {type: "string", value: "value", refOption: []},
+                            op: "==",
+                            value2: {type: "string", value: "value", refOption: []},
+                        }
+                    ]
+                },
+                {
+                    handle: "else"
+                },
+            ]
+        }
+    }
+}
+
+function createBranch() {
+    return {
+        handle: crypto.randomUUID(),
+        connector: "and",
+        conditions: [
+            {
+                value1: {type: "string", value: "value", refOption: []},
+                op: "==",
+                value2: {type: "string", value: "value", refOption: []},
+            }
+        ]
+    }
+}
+
 function createNodeData(node) {
     const nodeType = node.type;
     switch (nodeType) {
-        case "llm": node.data = initLLMNodeData(); node.name="大模型"; break;
+        case "llm": node.data = initLLMNodeData(); break;
         case "knowledgeRetrieval": break;
         case "knowledgeWrite": break;
-        case "condition": break;
-        case "crawler": node.data = initCrawlerNodeData(); node.name="爬虫"; break;
+        case "condition": node.data = initConditionNodeData(); break;
+        case "crawler": node.data = initCrawlerNodeData(); break;
     }
 }
+
+const typeOptions = [
+    {label: "string", value: "string"},
+    {label: "文件", value: "file"},
+    {label: "引用", value: "ref"},
+];
 
 export default {
     nodeTypes: nodeTypes,
@@ -81,4 +125,6 @@ export default {
     initLLMNodeData: initLLMNodeData,
     createNodeData: createNodeData,
     llmOutputFormatOptions: llmOutputFormatOptions,
+    typeOptions: typeOptions,
+    createBranch: createBranch,
 };

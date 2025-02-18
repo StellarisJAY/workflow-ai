@@ -10,17 +10,15 @@ const node = findNode(props.id);
 </script>
 
 <template>
-	<div>
-		<Handle type="target" :position="Position.Right" :connectable="true"></Handle>
-    <Card title="开始" :hoverable="true" body-style="padding:10px" head-style="padding:10px;">
-      <template #extra>
-        <node-extra :editable="false" :status="node.status"></node-extra>
-      </template>
-      <node-variable-display :has-input="true"
-                             :has-output="false"
-                             :input-variables="data['startNodeData'].inputVariables"></node-variable-display>
-    </Card>
-	</div>
+  <Card title="开始" :hoverable="true" body-style="padding:10px" head-style="padding:10px;">
+    <Handle type="target" :position="Position.Right" :connectable="true"/>
+    <template #extra>
+      <node-extra :editable="false" :status="node.status"></node-extra>
+    </template>
+    <node-variable-display :has-input="true"
+                           :has-output="false"
+                           :input-variables="data['startNodeData'].inputVariables"></node-variable-display>
+  </Card>
 </template>
 
 <style scoped></style>

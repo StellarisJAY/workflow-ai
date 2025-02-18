@@ -7,13 +7,11 @@ const props = defineProps(['id', 'type', 'data']);
 </script>
 
 <template>
-	<div>
-		<Handle type="source" :position="Position.Left" :connectable="true"></Handle>
-    <Card title="结束" :hoverable="true">
-      <node-variable-display :has-input="false" :has-output="true"
-                             :output-variables="data['endNodeData'].outputVariables"/>
-    </Card>
-	</div>
+  <Card title="结束" :hoverable="true">
+    <Handle type="source" :position="Position.Left" :connectable="true"></Handle>
+    <node-variable-display :has-input="false" :has-output="true"
+                           :output-variables="data['endNodeData'].outputVariables"/>
+  </Card>
 </template>
 
 <style scoped></style>
