@@ -69,7 +69,7 @@ function initConditionNodeData() {
         conditionNodeData: {
             branches: [
                 {
-                    handle: "1",
+                    handle: "if",
                     connector: "and",
                     conditions: [
                         {

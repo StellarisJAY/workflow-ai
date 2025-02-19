@@ -5,8 +5,8 @@ type Edge struct {
 	Source       string `json:"source"`
 	Target       string `json:"target"`
 	Type         string `json:"type"`
-	SourceHandle string `json:"source_handle"`
-	TargetHandle string `json:"target_handle"`
+	SourceHandle string `json:"sourceHandle"`
+	TargetHandle string `json:"targetHandle"`
 }
 
 type ConditionEdgeData struct {

@@ -10,8 +10,8 @@ const node = findNode(props.id);
 </script>
 
 <template>
-  <Card title="开始" :hoverable="true" body-style="padding:10px" head-style="padding:10px;">
-    <Handle type="target" :position="Position.Right" :connectable="true"/>
+  <Card title="开始" :hoverable="true"  :body-style="{padding:'10px'}" :head-style="{padding:'10px'}">
+    <Handle type="source" :position="Position.Right" :connectable="true"/>
     <template #extra>
       <node-extra :editable="false" :status="node.status"></node-extra>
     </template>

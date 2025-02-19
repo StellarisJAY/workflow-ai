@@ -9,6 +9,7 @@ const (
 	NodeTypeKnowledgeWrite     NodeType = "knowledgeWrite"     // 写入知识库节点
 	NodeTypeEnd                NodeType = "end"                // 结束节点
 	NodeTypeCrawler            NodeType = "crawler"            // 爬虫节点
+	NodeTypeCondition          NodeType = "condition"
 )
 
 type VariableType string
@@ -36,6 +37,7 @@ type Node struct {
 		StartNodeData                 *StartNodeData                 `json:"startNodeData"`
 		EndNodeData                   *EndNodeData                   `json:"endNodeData"`
 		CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`
+		ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`
 	} `json:"data"`
 }
 
@@ -81,4 +83,24 @@ type EndNodeData struct {
 type CrawlerNodeData struct {
 	InputVariables  []*Variable `json:"inputVariables"`
 	OutputVariables []*Variable `json:"outputVariables"`
+}
+
+type Condition struct {
+	Value1 *Variable `json:"value1"`
+	Value2 *Variable `json:"value2"`
+	Op     string    `json:"op"`
+}
+
+type ConditionNodeBranch struct {
+	Handle     string       `json:"handle"`
+	Connector  string       `json:"connector"`
+	Conditions []*Condition `json:"conditions"`
+}
+
+type ConditionNodeData struct {
+	Branches []*ConditionNodeBranch `json:"branches"`
+}
+
+type ConditionNodeOutput struct {
+	SuccessBranch string `json:"successBranch"`
 }

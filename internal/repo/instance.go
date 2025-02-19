@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"gorm.io/gorm"
 )
@@ -138,5 +139,29 @@ func (i *InstanceRepo) ListNodeInstanceStatus(ctx context.Context, workflowId in
 		WithContext(ctx).
 		Where("workflow_id =?", workflowId).
 		Scan(&result).Error
+	return result, err
+}
+
+func (i *InstanceRepo) GetOutputVariableFromNodeInstance(ctx context.Context, nodeId string, workflowId int64, varName string) (string, error) {
+	var output string
+	sel := fmt.Sprintf("JSON_EXTRACT(output, \"$.%s\") AS %s", varName, varName)
+	err := i.DB(ctx).Table(NodeInstanceTableName).
+		Select(sel).
+		Where("workflow_id = ?", workflowId).Where("node_id = ?", nodeId).
+		WithContext(ctx).
+		Find(&output).
+		Error
+	return output, err
+}
+
+func (i *InstanceRepo) GetConditionNodeBranch(ctx context.Context, workflowId int64) ([]string, error) {
+	var result []string
+	err := i.DB(ctx).Table(NodeInstanceTableName).
+		Select("JSON_EXTRACT(output, \"$.successBranch\") AS branch").
+		Where("workflow_id =?", workflowId).
+		Where("status = ?", model.NodeInstanceStatusCompleted).
+		Where("type = ?", "condition").
+		WithContext(ctx).
+		Find(&result).Error
 	return result, err
 }

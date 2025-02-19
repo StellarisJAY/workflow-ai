@@ -93,7 +93,7 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	if err != nil {
 		return 0, err
 	}
-	e.createNextNode(ctx, startNode, startNodeInstance)
+	e.stepWorkflow(ctx, startNode, instance.Id)
 	return instance.Id, nil
 }
 
@@ -143,7 +143,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		go func() {
 			e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
 			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.createNextNode(context.TODO(), node, nodeInstance)
+				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
 			} else {
 				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 			}
@@ -154,7 +154,6 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			return fmt.Errorf("invalid end node data")
 		}
 		e.executeEndNode(context.TODO(), node, nodeInstance, endNodeData)
-
 	case string(model.NodeTypeCrawler):
 		crawlerNodeData := node.Data.CrawlerNodeData
 		if crawlerNodeData == nil {
@@ -167,11 +166,26 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		go func() {
 			e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
 			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.createNextNode(context.TODO(), node, nodeInstance)
+				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
 			} else {
 				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 			}
 		}()
+	case string(model.NodeTypeCondition):
+		conditionNodeData := node.Data.ConditionNodeData
+		if conditionNodeData == nil {
+			return fmt.Errorf("invalid condition node data")
+		}
+		if err := e.executeConditionNode(context.TODO(), node, conditionNodeData, nodeInstance); err != nil {
+			nodeInstance.Status = model.NodeInstanceStatusFailed
+			nodeInstance.CompleteTime = time.Now()
+			nodeInstance.Error = err.Error()
+			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
+				log.Println("update node instance error:", err)
+			}
+			e.UpdateWorkflowFailed(ctx, nodeInstance.WorkflowId)
+			return err
+		}
 	}
 	return nil
 }
@@ -186,22 +200,27 @@ func (e *Engine) UpdateWorkflowFailed(ctx context.Context, workflowId int64) {
 	}
 }
 
-func (e *Engine) createNextNode(ctx context.Context, currNode *model.Node, currNodeInstance *model.NodeInstance) {
-	instance, err := e.instanceRepo.GetWorkflowInstance(ctx, currNodeInstance.WorkflowId)
+func (e *Engine) stepWorkflow(ctx context.Context, currNode *model.Node, workflowId int64) {
+	instance, err := e.instanceRepo.GetWorkflowInstance(ctx, workflowId)
 	if err != nil || instance == nil {
-		log.Println("can't find flow instance", err, currNodeInstance.WorkflowId)
+		log.Println("can't find flow instance", err, workflowId)
 		return
 	}
 	var definition model.WorkflowDefinition
 	_ = json.Unmarshal([]byte(instance.Data), &definition)
 	nextNodes := GetNextNodes(&definition, currNode)
+	e.executeNextNodes(ctx, nextNodes, &definition, workflowId)
+}
+
+func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, definition *model.WorkflowDefinition,
+	workflowId int64) {
 	for _, next := range nextNodes {
-		nodes := GetPrevNodes(&definition, next)
+		nodes := GetPrevNodes(definition, next)
 		ids := make([]string, len(nodes))
 		for i, node := range nodes {
 			ids[i] = node.Id
 		}
-		count, err := e.instanceRepo.CountRunningNodeInstancesWithNodeIds(ctx, currNodeInstance.WorkflowId, ids)
+		count, err := e.instanceRepo.CountRunningNodeInstancesWithNodeIds(ctx, workflowId, ids)
 		if err != nil {
 			log.Println("count running node instance error", err)
 			continue
@@ -213,7 +232,7 @@ func (e *Engine) createNextNode(ctx context.Context, currNode *model.Node, currN
 			Id:           e.snowflake.Generate().Int64(),
 			NodeId:       next.Id,
 			Status:       model.NodeInstanceStatusRunning,
-			WorkflowId:   currNodeInstance.WorkflowId,
+			WorkflowId:   workflowId,
 			AddTime:      time.Now(),
 			CompleteTime: time.Now(),
 			Type:         next.Type,

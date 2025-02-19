@@ -48,13 +48,31 @@ function getWorkflowDetail() {
     const definition = JSON.parse(workflowInstance.value.data);
     nodes.value = definition.nodes;
     edges.value = definition.edges;
-    const nodeStatusList = workflowInstance.value.nodeStatusList;
+    const nodeStatusList = workflowInstance.value['nodeStatusList'];
+    const passedEdges = workflowInstance.value['passedEdgesList'];
+    const successBranches = workflowInstance.value['successBranchList'];
+    // 设置节点状态名
     nodes.value.forEach(node=>{
       const n = nodeStatusList.find(ns=>ns.nodeId === node.id);
       if (n) {
         node.status = {id: n.status, text: n.statusName};
       }else {
         node.status = {id: 0, text: "未到达"};
+      }
+      // 标记条件节点通过的分支
+      if (node['type'] === 'condition') {
+        const conditionNodeData = node['data']['conditionNodeData'];
+        const branch = conditionNodeData.branches.find(b=>successBranches.includes(b.handle));
+        if (branch) {
+          branch['success'] = true;
+        }
+      }
+    });
+    // 标记通过的连线
+    edges.value.forEach(edge=>{
+      const f = passedEdges.find(e=>e === edge.id);
+      if (f) {
+        edge.passed = true;
       }
     });
     if (queryInterval.value === 0 && workflowInstance.value.status === 0) {

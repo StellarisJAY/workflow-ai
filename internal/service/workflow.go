@@ -7,6 +7,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/StellrisJAY/workflow-ai/internal/workflow"
+	"strings"
 )
 
 type WorkflowService struct {
@@ -85,14 +86,25 @@ func (w *WorkflowService) GetWorkflowInstanceDetail(ctx context.Context, workflo
 	}
 	instance.StatusName = instance.Status.String()
 	instance.Duration = instance.CompleteTime.Sub(instance.AddTime).String()
+	var definition model.WorkflowDefinition
+	_ = json.Unmarshal([]byte(instance.Data), &definition)
 	nodeStatusList, err := w.instanceRepo.ListNodeInstanceStatus(ctx, workflowId)
+	if err != nil {
+		return nil, err
+	}
+	branches, err := w.instanceRepo.GetConditionNodeBranch(ctx, workflowId)
 	if err != nil {
 		return nil, err
 	}
 	for _, nodeStatus := range nodeStatusList {
 		nodeStatus.StatusName = nodeStatus.Status.String()
 	}
+	for i, branch := range branches {
+		branches[i] = strings.Trim(branch, "\"")
+	}
 	instance.NodeStatusList = nodeStatusList
+	instance.PassedEdgesList = workflow.GetPassedEdges(&definition, nodeStatusList, branches)
+	instance.SuccessBranchList = branches
 	return instance, nil
 }
 

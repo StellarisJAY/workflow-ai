@@ -95,17 +95,19 @@ type WorkflowInstanceListDTO struct {
 }
 
 type WorkflowInstanceDetailDTO struct {
-	Id             int64                  `json:"id,string"`
-	TemplateId     int64                  `json:"templateId,string"`
-	TemplateName   string                 `json:"templateName"`
-	Status         WorkflowInstanceStatus `json:"status"`
-	StatusName     string                 `json:"statusName"`
-	AddTime        time.Time              `json:"addTime"`
-	AddUser        int64                  `json:"addUser"`
-	CompleteTime   time.Time              `json:"completeTime"`
-	Duration       string                 `json:"duration"`
-	Data           string                 `json:"data"`
-	NodeStatusList []*NodeStatusDTO       `json:"nodeStatusList" gorm:"-"`
+	Id                int64                  `json:"id,string"`
+	TemplateId        int64                  `json:"templateId,string"`
+	TemplateName      string                 `json:"templateName"`
+	Status            WorkflowInstanceStatus `json:"status"`
+	StatusName        string                 `json:"statusName"`
+	AddTime           time.Time              `json:"addTime"`
+	AddUser           int64                  `json:"addUser"`
+	CompleteTime      time.Time              `json:"completeTime"`
+	Duration          string                 `json:"duration"`
+	Data              string                 `json:"data"`
+	NodeStatusList    []*NodeStatusDTO       `json:"nodeStatusList" gorm:"-"`
+	PassedEdgesList   []string               `json:"passedEdgesList" gorm:"-"`
+	SuccessBranchList []string               `json:"successBranchList" gorm:"-"`
 }
 
 type NodeStatusDTO struct {

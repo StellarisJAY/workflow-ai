@@ -1,5 +1,5 @@
 <script setup>
-import {ref, watch} from 'vue'
+import {onUpdated, ref, watch} from 'vue'
 import {ConnectionMode, MarkerType, Panel, Position, useVueFlow, VueFlow} from '@vue-flow/core'
 import {Background} from '@vue-flow/background';
 import {Button, Drawer, Input, message, Modal, PageHeader, Select} from 'ant-design-vue';
@@ -21,6 +21,8 @@ const route = useRoute();
 const router = useRouter();
 const nodeTypeOptions = types.nodeTypeOptions;
 const edgeTypes = types.edgeTypes;
+const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop,
+  onNodesChange, onUpdateNodeInternals} = useVueFlow();
 
 const selectNodeType = ref("llm");
 
@@ -28,6 +30,10 @@ const nodeTypes = types.nodeTypes;
 
 const nodes = ref([]);
 const edges = ref([]);
+
+onUpdateNodeInternals((nodeIds)=>{
+  console.log(nodeIds);
+})
 
 if (props.isNewTemplate) {
   props.template.name = "新建模板"
@@ -71,8 +77,7 @@ watch(()=>props.template, function (oldVal, newVal) {
 }, {deep: true});
 
 const newNodeModalOpen = ref(false);
-const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop, 
-	onNodesChange} = useVueFlow();
+
 
 const executeLogDrawerOpen = ref(false);
 const llmDrawerOpen = ref(false);
@@ -119,7 +124,7 @@ onConnect(event => {
 		type: "custom",
 		source: event.source,
 		target: event.target,
-		markerStart: MarkerType.ArrowClosed,
+		markerEnd: MarkerType.ArrowClosed,
     sourceHandle: event.sourceHandle,
     targetHandle: event.targetHandle,
 	});
