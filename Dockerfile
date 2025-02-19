@@ -1,7 +1,6 @@
 FROM golang:1.22-bookworm AS builder
 WORKDIR /opt/workflow
 COPY go.mod /opt/workflow
-COPY go.sum /opt/workflow
 COPY cmd /opt/workflow/cmd
 COPY internal /opt/workflow/internal
 
