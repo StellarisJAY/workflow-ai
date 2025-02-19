@@ -1,0 +1,6 @@
+server:
+  port: 9090
+  host: 0.0.0.0
+  id: 1
+database:
+  url: root:12345678@tcp(172.17.0.1:3306)/workflow_ai?parseTime=True&loc=Local
