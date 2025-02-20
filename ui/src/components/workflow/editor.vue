@@ -15,6 +15,7 @@ import {useRoute, useRouter} from "vue-router";
 import types from "./types.js";
 import CrawlerSetting from "./setting/CrawlerSetting.vue";
 import ConditionSetting from "./setting/ConditionSetting.vue";
+import {randomUUID} from "../../util/uuid.js";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -120,7 +121,7 @@ onConnect(event => {
     return;
   }
 	edges.value.push({
-		id: crypto.randomUUID(),
+		id: randomUUID(),
 		type: "custom",
 		source: event.source,
 		target: event.target,
@@ -153,7 +154,7 @@ onNodeDragStop(ev => {
 
 // 添加节点
 function addNode(nodeType) {
-	const id = crypto.randomUUID();
+	const id = randomUUID();
 	const node = {
 		type: nodeType,
 		id: id,
