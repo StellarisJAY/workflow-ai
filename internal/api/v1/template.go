@@ -48,11 +48,11 @@ func (t *TemplateHandler) List(c *gin.Context) {
 	if err := c.ShouldBindQuery(&query); err != nil {
 		panic(err)
 	}
-	list, err := t.service.List(c, &query)
+	list, total, err := t.service.List(c, &query)
 	if err != nil {
 		panic(err)
 	}
-	c.JSON(200, common.NewSuccessResponseWithTotal(list, len(list)))
+	c.JSON(200, common.NewSuccessResponseWithTotal(list, total))
 }
 
 func (t *TemplateHandler) Delete(c *gin.Context) {

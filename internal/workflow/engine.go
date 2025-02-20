@@ -236,6 +236,8 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 			AddTime:      time.Now(),
 			CompleteTime: time.Now(),
 			Type:         next.Type,
+			Output:       "{}",
+			Error:        "",
 		}
 		if err := e.instanceRepo.InsertNodeInstance(ctx, nodeInstance); err != nil {
 			log.Println("insert node instance error", err)

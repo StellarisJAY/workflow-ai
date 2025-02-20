@@ -39,6 +39,6 @@ func (ls *LLMService) Get(ctx context.Context, id int64) (*model.LLMDetailDTO, e
 	return detail, nil
 }
 
-func (ls *LLMService) List(ctx context.Context, query *model.LLMQuery) ([]*model.LLMListDTO, error) {
+func (ls *LLMService) List(ctx context.Context, query *model.LLMQuery) ([]*model.LLMListDTO, int, error) {
 	return ls.repo.List(ctx, query)
 }

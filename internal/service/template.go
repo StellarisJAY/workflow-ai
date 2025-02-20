@@ -41,7 +41,7 @@ func (t *TemplateService) Get(ctx context.Context, id int64) (*model.TemplateDet
 	return detail, nil
 }
 
-func (t *TemplateService) List(ctx context.Context, query *model.TemplateQuery) ([]*model.TemplateListDTO, error) {
+func (t *TemplateService) List(ctx context.Context, query *model.TemplateQuery) ([]*model.TemplateListDTO, int, error) {
 	return t.repo.List(ctx, query)
 }
 

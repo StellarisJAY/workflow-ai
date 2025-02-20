@@ -15,6 +15,13 @@ type Config struct {
 		Port string `yaml:"port"`
 		Id   string `yaml:"id"`
 	} `yaml:"server"`
+	Cos struct {
+		BucketUrl  string `yaml:"bucketUrl"`
+		ServiceUrl string `yaml:"serviceUrl"`
+		SecretKey  string `yaml:"secretKey"`
+		SecretId   string `yaml:"secretId"`
+	}
+	FileStoreType string `yaml:"fileStoreType"`
 }
 
 func ParseConfig(path string) (*Config, error) {

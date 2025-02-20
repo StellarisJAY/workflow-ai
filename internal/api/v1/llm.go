@@ -32,11 +32,11 @@ func (lh *LLMHandler) ListLLM(c *gin.Context) {
 	if err := c.ShouldBindQuery(&query); err != nil {
 		panic(err)
 	}
-	list, err := lh.ls.List(c, &query)
+	list, total, err := lh.ls.List(c, &query)
 	if err != nil {
 		panic(err)
 	}
-	c.JSON(200, common.NewSuccessResponseWithTotal(list, len(list)))
+	c.JSON(200, common.NewSuccessResponseWithTotal(list, total))
 }
 
 func (lh *LLMHandler) GetLLMDetail(c *gin.Context) {

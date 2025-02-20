@@ -4,6 +4,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/config"
 	"github.com/StellrisJAY/workflow-ai/internal/middleware"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
+	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/StellrisJAY/workflow-ai/internal/workflow"
 	"github.com/bwmarrin/snowflake"
@@ -28,6 +29,7 @@ func (r *Router) Init() error {
 	if err != nil {
 		return err
 	}
+	repository.MigrateDB()
 	nodeId, err := strconv.ParseInt(r.conf.Server.Id, 10, 64)
 	if err != nil {
 		return err
@@ -36,18 +38,24 @@ func (r *Router) Init() error {
 	if err != nil {
 		return err
 	}
+
+	store := fs.NewFileStore(r.conf)
 	llmRepo := repo.NewLLMRepo(repository)
 	templateRepo := repo.NewTemplateRepo(repository)
 	instanceRepo := repo.NewInstanceRepo(repository)
+	kbRepo := repo.NewKnowledgeBaseRepo(repository)
 	tm := repo.NewTransactionManager(repository)
 	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm)
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
 	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
+	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store)
+
 	llmHandler := NewLLMHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)
 	workflowHandler := NewWorkflowHandler(workflowService)
+	kbHandler := NewKnowledgeBaseHandler(kbService)
 
 	r.e.Use(middleware.Recovery)
 	r.e.Use(cors.New(cors.Config{
@@ -85,6 +93,15 @@ func (r *Router) Init() error {
 			wf.GET("/outputs/:id", workflowHandler.Outputs)
 			wf.GET("/list", workflowHandler.List)
 			wf.GET("/node/detail", workflowHandler.GetNodeInstanceDetail)
+		}
+		kb := v1.Group("/knowledgeBase")
+		{
+			kb.POST("/create", kbHandler.Create)
+			kb.PUT("/update", kbHandler.Update)
+			kb.GET("/detail/:id", kbHandler.Detail)
+			kb.GET("//files/:kbId", kbHandler.ListFiles)
+			kb.GET("/list", kbHandler.List)
+			kb.POST("/upload", kbHandler.Upload)
 		}
 	}
 	return nil

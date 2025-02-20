@@ -5,6 +5,7 @@ import {Layout, LayoutSider, Menu, MenuItem, LayoutContent, Card} from "ant-desi
 import TemplateList from "../components/template/templateList.vue";
 import InstanceList from "../components/instance/instanceList.vue";
 import LlmList from "../components/llm/llmList.vue";
+import KnowledgeBaseList from "../components/knowledge/KnowledgeBaseList.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -37,6 +38,7 @@ const selectedKeys = ref(['1']);
       <Card style="min-height: 100vh">
         <template-list v-if="selectedKeys[0] === '1'"/>
         <llm-list v-if="selectedKeys[0] === '2'"></llm-list>
+        <knowledge-base-list v-if="selectedKeys[0] === '3'"/>
         <instance-list v-else-if="selectedKeys[0] === '5'"/>
       </Card>
     </LayoutContent>

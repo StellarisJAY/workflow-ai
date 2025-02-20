@@ -19,6 +19,7 @@ const llmList = ref([]);
 const query = ref({
   page: 1,
   pageSize: 10,
+  paged: true,
 });
 const total = ref(0);
 
@@ -26,8 +27,8 @@ const newLLM = ref({});
 const addLLMDrawerOpen = ref(false);
 
 function listLLM() {
-  llmAPI.listModels(query).then(resp=>{
-    total.value = resp.data.total;
+  llmAPI.listModels(query.value).then(resp=>{
+    total.value = resp.total;
     llmList.value = resp.data;
   });
 }
@@ -74,7 +75,7 @@ onMounted(_=>{
     </template>
   </Table>
 
-  <Pagination :current="query.page" :page-size="query.pageSize" :total="total"></Pagination>
+  <Pagination v-model:current="query.page" v-model:page-size="query.pageSize" v-model:total="total" @change="listLLM"></Pagination>
 
   <Drawer title="添加大模型" :open="addLLMDrawerOpen" @close="_=>{addLLMDrawerOpen=false;}">
     <Form>

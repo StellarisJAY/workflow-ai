@@ -12,7 +12,8 @@ const route = useRoute();
 const templateList = ref([]);
 const query = ref({
   page: 1,
-  pageSize: 2,
+  pageSize: 10,
+  paged: true,
 });
 const total = ref(0);
 const executeInputOpen = ref(false);

@@ -4,3 +4,9 @@ server:
   id: 1
 database:
   url: root:12345678@tcp(127.0.0.1:3306)/workflow_ai?parseTime=True&loc=Local
+fileStoreType: tencent_cos
+cos:
+  bucketUrl: http://cos.ap-chengdu.myqcloud.com
+  serviceUrl: https://cos.ap-chengdu.myqcloud.com
+  secretId: 1234
+  secretKey: 1234
