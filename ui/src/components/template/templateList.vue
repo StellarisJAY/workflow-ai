@@ -21,7 +21,7 @@ const executeInputVars = ref([]);
 const startingTemplateId = ref("");
 
 function listTemplates() {
-  templateAPI.listTemplate(query).then(resp=>{
+  templateAPI.listTemplate(query.value).then(resp=>{
     templateList.value = resp.data;
     total.value = resp.total;
   });
