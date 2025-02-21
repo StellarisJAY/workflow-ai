@@ -1,7 +1,8 @@
 import axios from "axios";
 
+const baseURL = "http://localhost:8080/api/v1";
 const v1 = axios.create({
-    baseURL: "http://localhost:8080/api/v1",
+    baseURL: baseURL,
 });
 
 v1.interceptors.request.use(config => {
@@ -22,6 +23,8 @@ function errorHandler(err) {
 
 const api = {
     axios: v1,
+    baseURL: baseURL,
+    cli: axios.create({baseURL: baseURL}),
     get(path, queryParams) {
         if (queryParams) {
             let params = [];

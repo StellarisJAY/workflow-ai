@@ -15,5 +15,34 @@ export default {
     },
     upload: function(form) {
         return api.postForm("/knowledgeBase/upload", form);
+    },
+    deleteFile: function(id) {
+        return api.delete("/knowledgeBase/file/"+id);
+    },
+    getFileProcessOptions: function(id) {
+        return api.get("/knowledgeBase/process/options/" + id);
+    },
+    updateFileProcessOptions: function(options) {
+        return api.put("/knowledgeBase/process/options", options);
+    },
+    startFileProcessing: function(id) {
+        return api.post("/knowledgeBase/process/start/" + id);
+    },
+    similaritySearch: function(request) {
+        return api.post("/knowledgeBase/similarity-search", request);
+    },
+    downloadFile: function(id) {
+        api.cli.get("/knowledgeBase/download/" + id).then(resp => {
+            const _res = resp.data
+            let blob = new Blob([_res]);
+            let downloadElement = document.createElement("a");
+            let href = window.URL.createObjectURL(blob); //创建下载的链接
+            downloadElement.href = href;
+            downloadElement.download = resp.headers["filename"]; //下载后文件名
+            document.body.appendChild(downloadElement);
+            downloadElement.click(); //点击下载
+            document.body.removeChild(downloadElement); //下载完成移除元素
+            window.URL.revokeObjectURL(href); //释放掉blob对象
+        });
     }
 }

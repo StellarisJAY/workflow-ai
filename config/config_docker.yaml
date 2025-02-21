@@ -10,3 +10,7 @@ cos:
   serviceUrl: https://cos.ap-chengdu.myqcloud.com
   secretId: 1234
   secretKey: 1234
+vectorStoreType: redis
+redis:
+  host: 172.17.0.1
+  port: 16379

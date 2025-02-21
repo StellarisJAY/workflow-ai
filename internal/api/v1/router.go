@@ -3,8 +3,10 @@ package v1
 import (
 	"github.com/StellrisJAY/workflow-ai/internal/config"
 	"github.com/StellrisJAY/workflow-ai/internal/middleware"
+	"github.com/StellrisJAY/workflow-ai/internal/rag"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
+	"github.com/StellrisJAY/workflow-ai/internal/repo/vector"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/StellrisJAY/workflow-ai/internal/workflow"
 	"github.com/bwmarrin/snowflake"
@@ -46,11 +48,13 @@ func (r *Router) Init() error {
 	kbRepo := repo.NewKnowledgeBaseRepo(repository)
 	tm := repo.NewTransactionManager(repository)
 	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm)
+	vectorstoreFactory := vector.MakeFactory(*r.conf)
+	documentProcessor := rag.NewDocumentProcessor(8, kbRepo, store, llmRepo, vectorstoreFactory)
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
 	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
-	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store)
+	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store, documentProcessor)
 
 	llmHandler := NewLLMHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)
@@ -99,9 +103,15 @@ func (r *Router) Init() error {
 			kb.POST("/create", kbHandler.Create)
 			kb.PUT("/update", kbHandler.Update)
 			kb.GET("/detail/:id", kbHandler.Detail)
-			kb.GET("//files/:kbId", kbHandler.ListFiles)
+			kb.GET("/files/:kbId", kbHandler.ListFiles)
 			kb.GET("/list", kbHandler.List)
 			kb.POST("/upload", kbHandler.Upload)
+			kb.DELETE("/file/:id", kbHandler.Delete)
+			kb.GET("/process/options/:id", kbHandler.GetFileProcessOptions)
+			kb.GET("/download/:id", kbHandler.DownloadFile)
+			kb.PUT("/process/options", kbHandler.UpdateFileProcessOptions)
+			kb.POST("/process/start/:id", kbHandler.StartFileProcessing)
+			kb.POST("/similarity-search", kbHandler.SimilaritySearch)
 		}
 	}
 	return nil

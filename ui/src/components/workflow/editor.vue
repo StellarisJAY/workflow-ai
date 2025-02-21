@@ -23,7 +23,7 @@ const router = useRouter();
 const nodeTypeOptions = types.nodeTypeOptions;
 const edgeTypes = types.edgeTypes;
 const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop,
-  onNodesChange, onUpdateNodeInternals} = useVueFlow();
+  onNodesChange} = useVueFlow();
 
 const selectNodeType = ref("llm");
 
@@ -31,10 +31,6 @@ const nodeTypes = types.nodeTypes;
 
 const nodes = ref([]);
 const edges = ref([]);
-
-onUpdateNodeInternals((nodeIds)=>{
-  console.log(nodeIds);
-})
 
 if (props.isNewTemplate) {
   props.template.name = "新建模板"
@@ -132,7 +128,6 @@ onConnect(event => {
 });
 // 连线断开
 onEdgesChange(ev => {
-  console.log(ev);
 	ev.forEach(e => {
 		if (e.type === "remove") {
 			removeEdge(e.id);

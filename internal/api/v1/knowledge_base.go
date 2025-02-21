@@ -5,6 +5,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"strconv"
 )
 
@@ -93,4 +94,83 @@ func (k *KnowledgeBaseHandler) ListFiles(c *gin.Context) {
 		panic(err)
 	}
 	c.JSON(200, common.NewSuccessResponseWithTotal(list, total))
+}
+
+func (k *KnowledgeBaseHandler) Delete(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	if err := k.service.Delete(c, id); err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(nil))
+}
+
+func (k *KnowledgeBaseHandler) GetFileProcessOptions(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	options, err := k.service.GetFileProcessOptions(c, id)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(options))
+}
+
+func (k *KnowledgeBaseHandler) DownloadFile(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	data, name, err := k.service.DownloadFile(c, id)
+	if err != nil {
+		panic(err)
+	}
+	c.Header("Filename", name)
+	c.Header("Content-Disposition", "attachment; filename=\""+name+"\"")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Access-Control-Expose-Headers", "Content-Disposition,Filename")
+	c.Data(http.StatusOK, "application/octet-stream", data)
+}
+
+func (k *KnowledgeBaseHandler) UpdateFileProcessOptions(c *gin.Context) {
+	var options model.KbFileProcessOptionsUpdateDTO
+	if err := c.ShouldBindJSON(&options); err != nil {
+		panic(err)
+	}
+	err := k.service.UpdateFileProcessOptions(c, &options)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(nil))
+}
+
+func (k *KnowledgeBaseHandler) StartFileProcessing(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	if err := k.service.ProcessFile(c, id); err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(nil))
+}
+
+func (k *KnowledgeBaseHandler) SimilaritySearch(c *gin.Context) {
+	var request model.KbSearchRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		panic(err)
+	}
+	result, err := k.service.SimilaritySearch(c, &request)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(result))
 }

@@ -110,3 +110,56 @@ func (k *KnowledgeBaseRepo) ListFile(ctx context.Context, kbId int64, query *mod
 	}
 	return result, p.Total, nil
 }
+
+func (k *KnowledgeBaseRepo) InsertFileProcessOptions(ctx context.Context, options *model.KbFileProcessOptions) error {
+	return k.DB(ctx).WithContext(ctx).Create(options).Error
+}
+
+func (k *KnowledgeBaseRepo) DeleteFile(ctx context.Context, fileId int64) error {
+	return k.DB(ctx).WithContext(ctx).Delete(&model.KnowledgeBaseFile{}, fileId).Error
+}
+
+func (k *KnowledgeBaseRepo) DeleteFileProcessOptions(ctx context.Context, fileId int64) error {
+	return k.DB(ctx).WithContext(ctx).Delete(&model.KbFileProcessOptions{}, fileId).Error
+}
+
+func (k *KnowledgeBaseRepo) GetFileProcessOptions(ctx context.Context, fileId int64) (*model.KbFileProcessOptions, error) {
+	var options *model.KbFileProcessOptions
+	if err := k.DB(ctx).WithContext(ctx).Where("file_id =?", fileId).Find(&options).Error; err != nil {
+		return nil, err
+	}
+	return options, nil
+}
+
+func (k *KnowledgeBaseRepo) UpdateFileProcessOptions(ctx context.Context, options *model.KbFileProcessOptions) error {
+	return k.DB(ctx).WithContext(ctx).Where("file_id =?", options.FileId).Updates(options).Error
+}
+
+func (k *KnowledgeBaseRepo) GetFileProcessTask(ctx context.Context, taskId int64) (*model.KbFileProcessTask, error) {
+	var task *model.KbFileProcessTask
+	if err := k.DB(ctx).WithContext(ctx).Where("id =?", taskId).Find(&task).Error; err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
+func (k *KnowledgeBaseRepo) InsertFileProcessTask(ctx context.Context, task *model.KbFileProcessTask) error {
+	return k.DB(ctx).WithContext(ctx).Create(task).Error
+}
+
+func (k *KnowledgeBaseRepo) UpdateFileProcessTask(ctx context.Context, task *model.KbFileProcessTask) error {
+	return k.DB(ctx).WithContext(ctx).Where("id =?", task.Id).Updates(task).Error
+}
+
+func (k *KnowledgeBaseRepo) UpdateFileStatus(ctx context.Context, fileId int64, status model.KbFileStatus) error {
+	return k.DB(ctx).Table(model.KnowledgeBaseFile{}.TableName()).Where("id = ?", fileId).
+		UpdateColumns(map[string]interface{}{
+			"status": status,
+		}).Error
+}
+
+func (k *KnowledgeBaseRepo) GetFilesInIdList(ctx context.Context, fileIds []int64) ([]*model.KbFileListDTO, error) {
+	var result []*model.KbFileListDTO
+	err := k.DB(ctx).Table(model.KnowledgeBaseFile{}.TableName()).Select("id,name,length").Where("id IN (?)", fileIds).Find(&result).Error
+	return result, err
+}

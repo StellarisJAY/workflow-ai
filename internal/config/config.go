@@ -21,7 +21,14 @@ type Config struct {
 		SecretKey  string `yaml:"secretKey"`
 		SecretId   string `yaml:"secretId"`
 	}
-	FileStoreType string `yaml:"fileStoreType"`
+	FileStoreType   string `yaml:"fileStoreType"`
+	VectorStoreType string `yaml:"vectorStoreType"`
+	Redis           struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		Password string `yaml:"password"`
+		Db       int    `yaml:"db"`
+	}
 }
 
 func ParseConfig(path string) (*Config, error) {

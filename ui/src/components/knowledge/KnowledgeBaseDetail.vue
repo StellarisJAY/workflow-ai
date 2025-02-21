@@ -7,6 +7,7 @@ import llmAPI from '../../api/llm.js';
 import knowledgeBaseAPI from '../../api/knowledgeBase.js';
 import {useRoute} from "vue-router";
 import KnowledgeBaseDocumentList from "./KnowledgeBaseDocumentList.vue";
+import KnowledgeBaseSearch from "./KnowledgeBaseSearch.vue";
 
 const route = useRoute()
 const id = route.params['id'];
@@ -52,8 +53,9 @@ function listEmbeddingModels() {
       </Menu>
     </LayoutSider>
     <LayoutContent has-sider>
-      <Card style="min-height: 100vh" :title="knowledgeBaseDetail.name">
+      <Card style="min-height: 100vh;" :title="knowledgeBaseDetail.name">
         <KnowledgeBaseDocumentList v-if="selectedKeys[0]==='1'"/>
+        <KnowledgeBaseSearch v-else-if="selectedKeys[0]==='2'"/>
       </Card>
     </LayoutContent>
   </Layout>
