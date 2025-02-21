@@ -165,14 +165,17 @@ var defaultSeparators = []string{
 	"\u3002", // Ideographic full stop
 	"",
 	"\n",
-	"\n\n",
+	"！",
+	"？",
+	"!",
+	"?",
 }
 
 func DefaultKbFileProcessOptions() KbFileProcessOptions {
 	data, _ := json.Marshal(defaultSeparators)
 	return KbFileProcessOptions{
 		Separators: string(data),
-		ChunkSize:  128,
+		ChunkSize:  512,
 	}
 }
 
