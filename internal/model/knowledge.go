@@ -207,3 +207,9 @@ type KbSearchResult struct {
 	Documents []*KbSearchReturnDocument `json:"documents"`
 	Files     []*KbFileListDTO          `json:"files"`
 }
+
+type ListChunksRequest struct {
+	KbId   int64 `json:"kbId,string" binding:"required" form:"kbId"`
+	FileId int64 `json:"fileId,string" binding:"required" form:"fileId"`
+	common.PageQuery
+}

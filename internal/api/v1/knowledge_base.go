@@ -174,3 +174,27 @@ func (k *KnowledgeBaseHandler) SimilaritySearch(c *gin.Context) {
 	}
 	c.JSON(200, common.NewSuccessResponse(result))
 }
+
+func (k *KnowledgeBaseHandler) FulltextSearch(c *gin.Context) {
+	var request model.KbSearchRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		panic(err)
+	}
+	result, err := k.service.FulltextSearch(c, &request)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(result))
+}
+
+func (k *KnowledgeBaseHandler) ListChunks(c *gin.Context) {
+	var request model.ListChunksRequest
+	if err := c.ShouldBindQuery(&request); err != nil {
+		panic(err)
+	}
+	result, total, err := k.service.ListChunks(c, &request)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponseWithTotal(result, total))
+}

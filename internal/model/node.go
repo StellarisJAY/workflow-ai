@@ -22,6 +22,14 @@ const (
 	VariableTypeArray  VariableType = "array"
 )
 
+type KbSearchType string
+
+const (
+	KbSearchTypeSimilarity KbSearchType = "similarity" // 语义搜索
+	KbSearchTypeFulltext   KbSearchType = "fulltext"   // 全文搜索
+	KbSearchTypeMixed      KbSearchType = "mixed"      // 混合搜索
+)
+
 type Node struct {
 	Id       string `json:"id"`   // 节点ID
 	Type     string `json:"type"` // 节点类型
@@ -61,8 +69,13 @@ type KnowledgeBaseWriteNodeData struct {
 
 // RetrieveKnowledgeBaseNodeData 检索知识库节点数据
 type RetrieveKnowledgeBaseNodeData struct {
-	KnowledgeBaseId int64  `json:"knowledgeBaseId"` // 知识库ID
-	Query           string `json:"query"`           // 检索内容, {{nodeId.xxx}}表示从某节点的变量列表获取，空表示运行时输入
+	KbId                int64        `json:"kbId,string"`         // 知识库ID
+	SearchType          KbSearchType `json:"searchType"`          // 搜索类型
+	Count               int          `json:"count"`               // 返回最大数量
+	SimilarityThreshold float32      `json:"similarityThreshold"` // 相似度阈值
+	OptimizeQuery       bool         `json:"optimizeQuery"`       // 是否优化用户输入
+	InputVariables      []*Variable  `json:"inputVariables"`      // 输入变量，必填query（查询内容）
+	OutputVariables     []*Variable  `json:"outputVariables"`     // 输出变量
 }
 
 type StartNodeData struct {

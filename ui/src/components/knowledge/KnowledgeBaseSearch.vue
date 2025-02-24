@@ -2,11 +2,13 @@
 import {
   Form, FormItem, Button,
   Textarea, Card, Row, Col, Slider, InputNumber, message, Divider,
-  Collapse, CollapsePanel, List, ListItem
+  Collapse, CollapsePanel, Select
 } from "ant-design-vue";
 import {ref} from "vue";
 import knowledgeBaseAPI from "../../api/knowledgeBase.js";
 import {useRoute} from "vue-router";
+import {kbSearchTypes} from "../../api/const.js";
+
 const route = useRoute()
 const kbId = route.params["id"];
 
@@ -18,8 +20,19 @@ const searchRequest = ref({
 });
 const searchResult = ref([]);
 const activeKey = ref("0");
+
+const searchOption = ref("similarity");
+
 function similaritySearch() {
   knowledgeBaseAPI.similaritySearch(searchRequest.value).then((resp) => {
+    searchResult.value = resp.data;
+  }).catch((err) => {
+    message.error("搜索失败");
+  })
+}
+
+function fulltextSearch() {
+  knowledgeBaseAPI.fullTextSearch(searchRequest.value).then((resp) => {
     searchResult.value = resp.data;
   }).catch((err) => {
     message.error("搜索失败");
@@ -37,8 +50,11 @@ function downloadFile(id) {
     <Col :span="8">
       <Card style="height:80vh">
         <Form>
-          <FormItem label="相似度阈值">
-            <Slider v-model:value="searchRequest.scoreThreshold" :min="0" :max="1" :step="0.1"/>
+          <FormItem label="搜索方式">
+            <Select :options="kbSearchTypes" v-model:value="searchOption"/>
+          </FormItem>
+          <FormItem label="相似度阈值" v-if="searchOption==='similarity'">
+            <Slider v-model:value="searchRequest.scoreThreshold" :min="0.01" :max="0.99" :step="0.01"/>
           </FormItem>
           <FormItem label="最大返回数量">
             <InputNumber v-model:value="searchRequest.count" :min="1"/>
@@ -47,7 +63,8 @@ function downloadFile(id) {
             <Textarea v-model:value="searchRequest.input" style="height: 300px"/>
           </FormItem>
         </Form>
-        <Button type="primary" @click="similaritySearch">检索</Button>
+        <Button v-if="searchOption==='similarity'" type="primary" @click="similaritySearch">搜索</Button>
+        <Button v-if="searchOption==='fulltext'" type="primary" @click="fulltextSearch">搜索</Button>
       </Card>
     </Col>
     <Col :span="16">

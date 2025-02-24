@@ -202,6 +202,38 @@ func (k *KnowledgeBaseService) SimilaritySearch(ctx context.Context, request *mo
 	if err != nil {
 		return nil, err
 	}
+	files, err := k.findReferencedFiles(ctx, documents)
+	if err != nil {
+		return nil, err
+	}
+	result := &model.KbSearchResult{
+		Documents: documents,
+		Files:     files,
+	}
+	return result, nil
+}
+
+func (k *KnowledgeBaseService) FulltextSearch(ctx context.Context, request *model.KbSearchRequest) (*model.KbSearchResult, error) {
+	documents, err := k.processor.FulltextSearch(ctx, request.KbId, request.Input, request.Count)
+	if err != nil {
+		return nil, err
+	}
+	files, err := k.findReferencedFiles(ctx, documents)
+	if err != nil {
+		return nil, err
+	}
+	result := &model.KbSearchResult{
+		Documents: documents,
+		Files:     files,
+	}
+	return result, nil
+}
+
+func (k *KnowledgeBaseService) ListChunks(ctx context.Context, request *model.ListChunksRequest) ([]*model.KbSearchReturnDocument, int, error) {
+	return k.processor.ListChunks(ctx, request.KbId, request.FileId, request.Page, request.PageSize)
+}
+
+func (k *KnowledgeBaseService) findReferencedFiles(ctx context.Context, documents []*model.KbSearchReturnDocument) ([]*model.KbFileListDTO, error) {
 	ids := make(map[string]struct{})
 	for _, document := range documents {
 		ids[document.FileId] = struct{}{}
@@ -211,13 +243,5 @@ func (k *KnowledgeBaseService) SimilaritySearch(ctx context.Context, request *mo
 		i, _ := strconv.ParseInt(id, 10, 64)
 		idList = append(idList, i)
 	}
-	files, err := k.kbRepo.GetFilesInIdList(ctx, idList)
-	if err != nil {
-		return nil, err
-	}
-	result := &model.KbSearchResult{
-		Documents: documents,
-		Files:     files,
-	}
-	return result, nil
+	return k.kbRepo.GetFilesInIdList(ctx, idList)
 }

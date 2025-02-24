@@ -87,6 +87,28 @@ function initConditionNodeData() {
     }
 }
 
+function initKnowledgeRetrievalNode() {
+    return {
+        name: "知识库检索",
+        knowledgeRetrievalNodeData: {
+            inputVariables: [{
+                name: "query",
+                type: "string",
+                value: "",
+                mustExist: true
+            }],
+            outputVariables: [
+                {name: "total", type: "number", value: ""},
+                {name: "documents", type: "array", value: ""},
+            ],
+            searchType: "similarity",
+            count: 10,
+            similarityThreshold: 0.5,
+            kbId: "0",
+        }
+    }
+}
+
 function createBranch() {
     return {
         handle: crypto.randomUUID(),
@@ -105,7 +127,7 @@ function createNodeData(node) {
     const nodeType = node.type;
     switch (nodeType) {
         case "llm": node.data = initLLMNodeData(); break;
-        case "knowledgeRetrieval": break;
+        case "knowledgeRetrieval": node.data = initKnowledgeRetrievalNode(); break;
         case "knowledgeWrite": break;
         case "condition": node.data = initConditionNodeData(); break;
         case "crawler": node.data = initCrawlerNodeData(); break;
@@ -122,7 +144,6 @@ export default {
     nodeTypes: nodeTypes,
     edgeTypes: edgeTypes,
     nodeTypeOptions: nodeTypeOptions,
-    initLLMNodeData: initLLMNodeData,
     createNodeData: createNodeData,
     llmOutputFormatOptions: llmOutputFormatOptions,
     typeOptions: typeOptions,

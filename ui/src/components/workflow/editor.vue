@@ -6,6 +6,7 @@ import {Button, Drawer, Input, message, Modal, PageHeader, Select} from 'ant-des
 import llmAPI from '../../api/llm';
 import templateAPI from '../../api/template.js';
 import workflowAPI from '../../api/workflow.js';
+import knowledgeBaseAPI from '../../api/knowledgeBase.js';
 import LlmSetting from './setting/LLMSetting.vue';
 import StartSetting from "./setting/StartSetting.vue";
 import NodeUtil from "../../util/nodeUtil.js";
@@ -16,6 +17,7 @@ import types from "./types.js";
 import CrawlerSetting from "./setting/CrawlerSetting.vue";
 import ConditionSetting from "./setting/ConditionSetting.vue";
 import {randomUUID} from "../../util/uuid.js";
+import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -91,6 +93,8 @@ const currentSettingNodes = ref({});
 const llmList = ref([]);
 const llmOptions = ref([]);
 const settingRefOptions = ref([]);
+const kbList = ref([]);
+const kbOptions = ref([]);
 
 // 点击节点，弹出侧边设置
 onNodeClick(event => {
@@ -99,7 +103,7 @@ onNodeClick(event => {
   currentSettingNodes.value[curNode.type] = curNode;
 	switch (curNode.type) {
 		case "llm": prepareLLMOptions(); break;
-		case "knowledgeRetrieval": knowledgeRetrievalDrawerOpen.value = true; break;
+		case "knowledgeRetrieval": prepareKbOptions(); break;
 		case "knowledgeWrite": knowledgeWriteDrawerOpen.value = true; break;
     case "start": startDrawerOpen.value = true; break;
     case "end": endDrawerOpen.value = true; break;
@@ -235,7 +239,7 @@ function getPrevNodesOutputs(currNode) {
 }
 
 function prepareLLMOptions() {
-  llmAPI.listModels({}).then(resp=>{
+  llmAPI.listModels({paged: false}).then(resp=>{
     llmList.value = resp.data;
     const options = [];
     llmList.value.forEach(item=>{
@@ -244,6 +248,18 @@ function prepareLLMOptions() {
     llmOptions.value = options;
     llmDrawerOpen.value = true;
   });
+}
+
+function prepareKbOptions() {
+  knowledgeBaseAPI.list({paged: false}).then(resp=>{
+    kbList.value = resp.data;
+    const options = [];
+    kbList.value.forEach(item=>{
+      options.push({label: item.name, value: item.id});
+    });
+    kbOptions.value = options;
+    knowledgeRetrievalDrawerOpen.value = true;
+  })
 }
 
 const outputInterval = ref(0);
@@ -309,7 +325,9 @@ function getExecuteOutputs(workflowId) {
     <LlmSetting v-model:node="currentSettingNodes['llm']" :ref-options="settingRefOptions"
                 :llm-list="llmList" :llm-options="llmOptions"/>
 	</Drawer>
-	<Drawer title="知识库检索配置" size="default" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}"></Drawer>
+	<Drawer title="知识库检索配置" size="default" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}">
+    <KnowledgeRetrievalSetting :node="currentSettingNodes['knowledgeRetrieval']" :ref-options="settingRefOptions" :kb-options="kbOptions"/>
+  </Drawer>
 	<Drawer title="知识库写入配置" size="default" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
   <Drawer title="开始配置" size="default" :open="startDrawerOpen" @close="_=>{startDrawerOpen = false;}">
     <start-setting v-model:node="currentSettingNodes['start']"/>

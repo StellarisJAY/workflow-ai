@@ -8,3 +8,8 @@ export const llmAPITypeOptions = [
     {label: "OpenAI", value: "openai"},
     {label: "Ollama", value: "ollama"},
 ]
+
+export const kbSearchTypes = [
+    {label: "语义搜索", value: "similarity"},
+    {label: "全文搜索", value: "fulltext"},
+];

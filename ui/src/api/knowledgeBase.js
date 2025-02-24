@@ -31,6 +31,9 @@ export default {
     similaritySearch: function(request) {
         return api.post("/knowledgeBase/similarity-search", request);
     },
+    fullTextSearch: function(request) {
+        return api.post("/knowledgeBase/fulltext-search", request);
+    },
     downloadFile: function(id) {
         api.cli.get("/knowledgeBase/download/" + id).then(resp => {
             const _res = resp.data

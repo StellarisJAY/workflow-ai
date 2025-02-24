@@ -15,7 +15,6 @@ import (
 	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/textsplitter"
-	"github.com/tmc/langchaingo/vectorstores"
 	"log"
 	"time"
 )
@@ -75,20 +74,34 @@ func (d *DocumentProcessor) SimilaritySearch(ctx context.Context, kbId int64, in
 	if err != nil {
 		return nil, err
 	}
-	documents, err := vectorStore.SimilaritySearch(ctx, input, n, vectorstores.WithScoreThreshold(scoreThreshold))
+	defer vectorStore.Close()
+	documents, err := vectorStore.SimilaritySearch(ctx, input, n, scoreThreshold)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*model.KbSearchReturnDocument, len(documents))
-	for i, doc := range documents {
-		result[i] = &model.KbSearchReturnDocument{
-			Content: doc.PageContent,
-			Score:   doc.Score,
-			ChunkId: doc.Metadata["id"].(string),
-			FileId:  doc.Metadata["fileId"].(string),
-		}
+	return documents, nil
+}
+
+func (d *DocumentProcessor) FulltextSearch(ctx context.Context, kbId int64, input string, n int) ([]*model.KbSearchReturnDocument, error) {
+	vectorStore, err := d.vectorStoreFactory.MakeVectorStore(ctx, kbId, nil)
+	if err != nil {
+		return nil, err
 	}
-	return result, nil
+	defer vectorStore.Close()
+	documents, err := vectorStore.FulltextSearch(ctx, input, n)
+	if err != nil {
+		return nil, err
+	}
+	return documents, nil
+}
+
+func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId int64, page int, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {
+	vectorStore, err := d.vectorStoreFactory.MakeVectorStore(ctx, kbId, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer vectorStore.Close()
+	return vectorStore.ListChunks(ctx, fileId, page, pageSize)
 }
 
 // splitDocument 拆分文档
@@ -113,8 +126,9 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 	if err != nil {
 		return nil, err
 	}
-	for _, chunk := range chunks {
+	for i, chunk := range chunks {
 		chunk.Metadata["fileId"] = file.Id
+		chunk.Metadata["order"] = i
 	}
 	return chunks, nil
 }
@@ -137,6 +151,7 @@ func (d *DocumentProcessor) embedDocument(ctx context.Context, kb *model.Knowled
 	if err != nil {
 		return nil, err
 	}
+	defer store.Close()
 	chunkIds, err := store.AddDocuments(ctx, chunks)
 	return chunkIds, err
 }

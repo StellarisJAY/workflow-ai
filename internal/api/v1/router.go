@@ -47,9 +47,9 @@ func (r *Router) Init() error {
 	instanceRepo := repo.NewInstanceRepo(repository)
 	kbRepo := repo.NewKnowledgeBaseRepo(repository)
 	tm := repo.NewTransactionManager(repository)
-	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm)
 	vectorstoreFactory := vector.MakeFactory(*r.conf)
 	documentProcessor := rag.NewDocumentProcessor(8, kbRepo, store, llmRepo, vectorstoreFactory)
+	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor)
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
@@ -112,6 +112,8 @@ func (r *Router) Init() error {
 			kb.PUT("/process/options", kbHandler.UpdateFileProcessOptions)
 			kb.POST("/process/start/:id", kbHandler.StartFileProcessing)
 			kb.POST("/similarity-search", kbHandler.SimilaritySearch)
+			kb.POST("/fulltext-search", kbHandler.FulltextSearch)
+			kb.GET("/chunks", kbHandler.ListChunks)
 		}
 	}
 	return nil
