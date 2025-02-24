@@ -86,7 +86,7 @@ func (r *RedisVectorStore) AddDocuments(ctx context.Context, docs []schema.Docum
 func (r *RedisVectorStore) FulltextSearch(ctx context.Context, query string, n int) ([]*model.KbSearchReturnDocument, error) {
 	cmd := r.cli.B().FtSearch().
 		Index(indexName(r.kbId)).
-		Query(fmt.Sprintf(`@content:"%s"`, query)).Language("chinese").
+		Query(fmt.Sprintf(`@content:%s`, query)).
 		Limit().OffsetNum(0, int64(n)).
 		Dialect(2).
 		Build()
