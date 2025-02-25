@@ -71,3 +71,18 @@ func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) 
 	}
 	return definition.Nodes[idx].Data.StartNodeData.InputVariables, nil
 }
+
+func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.NodeType) (*model.Node, error) {
+	switch nodeType {
+	case model.NodeTypeCondition:
+		return model.ConditionNodePrototype, nil
+	case model.NodeTypeLLM:
+		return model.LLMNodePrototype, nil
+	case model.NodeTypeCrawler:
+		return model.CrawlerNodePrototype, nil
+	case model.NodeTypeKnowledgeRetrieval:
+		return model.KbRetrievalNodePrototype, nil
+	default:
+		return nil, errors.New("无效的节点类型")
+	}
+}

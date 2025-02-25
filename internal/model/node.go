@@ -15,11 +15,12 @@ const (
 type VariableType string
 
 const (
-	VariableTypeNumber VariableType = "number"
-	VariableTypeString VariableType = "string"
-	VariableTypeFile   VariableType = "file"
-	VariableTypeRef    VariableType = "ref" // 引用其他节点的变量, 值为 节点ID.变量名
-	VariableTypeArray  VariableType = "array"
+	VariableTypeNumber      VariableType = "number"
+	VariableTypeString      VariableType = "string"
+	VariableTypeFile        VariableType = "file"
+	VariableTypeRef         VariableType = "ref" // 引用其他节点的变量, 值为 节点ID.变量名
+	VariableTypeStringArray VariableType = "array_str"
+	VariableTypeNumberArray VariableType = "array_num"
 )
 
 type KbSearchType string
@@ -37,16 +38,18 @@ type Node struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
 	} `json:"position"` // 节点位置
-	Data struct {
-		Name                          string                         `json:"name"`
-		LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
-		KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`
-		RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
-		StartNodeData                 *StartNodeData                 `json:"startNodeData"`
-		EndNodeData                   *EndNodeData                   `json:"endNodeData"`
-		CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`
-		ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`
-	} `json:"data"`
+	Data NodeData `json:"data"`
+}
+
+type NodeData struct {
+	Name                          string                         `json:"name"`
+	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
+	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`
+	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
+	StartNodeData                 *StartNodeData                 `json:"startNodeData"`
+	EndNodeData                   *EndNodeData                   `json:"endNodeData"`
+	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`
+	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`
 }
 
 // LLMNodeData LLM节点数据
@@ -83,10 +86,13 @@ type StartNodeData struct {
 }
 
 type Variable struct {
-	Type      string `json:"type"`      // 变量类型
-	Name      string `json:"name"`      // 变量名
-	Value     string `json:"value"`     // 变量值
-	MustExist bool   `json:"mustExist"` // 是否必须存在
+	Type         string         `json:"type"`         // 变量类型
+	Name         string         `json:"name"`         // 变量名
+	Value        string         `json:"value"`        // 变量值
+	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
+	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
+	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
+	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
 }
 
 type EndNodeData struct {
@@ -116,4 +122,69 @@ type ConditionNodeData struct {
 
 type ConditionNodeOutput struct {
 	SuccessBranch string `json:"successBranch"`
+}
+
+var ConditionNodePrototype = &Node{
+	Type: string(NodeTypeCondition),
+	Data: NodeData{
+		ConditionNodeData: &ConditionNodeData{
+			Branches: []*ConditionNodeBranch{
+				{
+					Handle:     "if",
+					Connector:  "and",
+					Conditions: []*Condition{},
+				},
+			},
+		},
+	},
+}
+
+var LLMNodePrototype = &Node{
+	Type: string(NodeTypeLLM),
+	Data: NodeData{
+		LLMNodeData: &LLMNodeData{
+			Prompt:          "",
+			InputVariables:  []*Variable{},
+			OutputFormat:    "JSON",
+			OutputVariables: []*Variable{},
+			Temperature:     0.5,
+			TopP:            0.5,
+		},
+	},
+}
+
+var KbRetrievalNodePrototype = &Node{
+	Type: string(NodeTypeKnowledgeRetrieval),
+	Data: NodeData{
+		RetrieveKnowledgeBaseNodeData: &RetrieveKnowledgeBaseNodeData{
+			SearchType:          KbSearchTypeSimilarity,
+			Count:               10,
+			SimilarityThreshold: 0.8,
+			OptimizeQuery:       false,
+			InputVariables: []*Variable{
+				{Name: "query", Type: string(VariableTypeString), Required: true, Fixed: true}, // 检索内容
+			},
+			OutputVariables: []*Variable{
+				{Name: "total", Type: string(VariableTypeNumber), Required: true, Fixed: true},          // 检索到的文档总数
+				{Name: "documents", Type: string(VariableTypeStringArray), Required: true, Fixed: true}, // 文档列表
+			},
+		},
+	},
+}
+
+var CrawlerNodePrototype = &Node{
+	Type: string(NodeTypeCrawler),
+	Data: NodeData{
+		CrawlerNodeData: &CrawlerNodeData{
+			InputVariables: []*Variable{
+				{Name: "url", Type: string(VariableTypeString), Required: true, Fixed: true}, // 网页url
+			},
+			OutputVariables: []*Variable{
+				{Name: "code", Type: string(VariableTypeNumber), Required: true, Fixed: true},        // HTTP状态码
+				{Name: "message", Type: string(VariableTypeString), Required: true, Fixed: true},     // HTTP状态码描述
+				{Name: "data", Type: string(VariableTypeString), Required: true, Fixed: true},        // 网页内容
+				{Name: "contentType", Type: string(VariableTypeString), Required: true, Fixed: true}, // 网页内容类型
+			},
+		},
+	},
 }

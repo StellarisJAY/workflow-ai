@@ -90,3 +90,12 @@ func (t *TemplateHandler) GetStartInputVariables(c *gin.Context) {
 	}
 	c.JSON(200, common.NewSuccessResponse(variables))
 }
+
+func (t *TemplateHandler) GetNodePrototype(c *gin.Context) {
+	nodeType := c.Query("nodeType")
+	prototype, err := t.service.GetNodePrototype(c, model.NodeType(nodeType))
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(prototype))
+}

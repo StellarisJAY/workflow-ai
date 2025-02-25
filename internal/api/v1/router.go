@@ -89,6 +89,7 @@ func (r *Router) Init() error {
 			template.GET("/detail/:id", templateHandler.GetDetail)
 			template.GET("/list", templateHandler.List)
 			template.GET("/start-variables/:id", templateHandler.GetStartInputVariables)
+			template.GET("/prototype", templateHandler.GetNodePrototype)
 		}
 		wf := v1.Group("/workflow")
 		{
