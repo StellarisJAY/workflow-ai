@@ -1,30 +1,33 @@
 <script setup>
 import {Input, List, ListItem, Button, Select, Cascader} from "ant-design-vue";
-const props = defineProps(['inputVariables', 'outputVariables', 'hasInput', 'hasOutput',
-  'allowRef', 'nodeId', 'refOptions', 'outputEditable', 'inputEditable', 'allowAddDelInput', 'allowAddDelOutput']);
+const props = defineProps(['inputVariables', 'outputVariables','nodeId', "nodeData", "node"]);
 import {DeleteFilled} from "@ant-design/icons-vue";
-import {watch} from "vue";
+import {onMounted, ref} from "vue";
+import NodeUtil from "../../../util/nodeUtil.js";
 
-const typeOptions = [
-  {label: "string", value: "string"},
-  {label: "文件", value: "file"},
-  {label: "引用", value: "ref"},
-];
-
-watch(_=>props.inputVariables, ()=>{
+const refOptions = ref([]);
+onMounted(()=>{
+  refOptions.value = NodeUtil.getPrevNodesOutputs(props.nodeId);
   props.inputVariables.forEach(variable => {
-    if (variable.type === "ref") {
-      variable['refOption'] = variable.value.split('.');
+    if (variable.ref && variable.ref !== "") {
+      variable['refOption'] = variable['ref'].split('.');
     }
   });
 });
 
 function onRefOptionChange(variable, ev) {
-  variable.value = ev[0] + "." + ev[1];
+  variable['ref'] = ev[0] + "." + ev[1];
 }
 
 function addVariable(target) {
-  target.push({name: "variable", value: "", type: "string", mustExist: false});
+  let allowRef = true;
+  const nodeType = props.node.type;
+  if (nodeType === 'start') allowRef = false;
+  target.push({name: "variable", value: "", type: "string", allowRef: allowRef});
+}
+
+function addOutputVariable(target) {
+  target.push({name: "variable", value: "", type: "string", allowRef: false});
 }
 
 function removeVariable(target, name) {
@@ -33,40 +36,91 @@ function removeVariable(target, name) {
     target.splice(idx, 1);
   }
 }
+
+function getTypeOptions(variable) {
+  let types;
+  if (variable['allowedTypes']) {
+    types = variable['allowedTypes'];
+  }else {
+    types = props.nodeData['defaultAllowVarTypes'];
+  }
+  const typeOptions = [];
+  types.forEach(item => {
+    typeOptions.push({label: item, value: item});
+  });
+  return typeOptions;
+}
+
+function getValueOptions(variable) {
+  const options = [{label: "值", value: "value"}];
+  if (variable['allowRef']) {
+    options.push({label: "引用", value: "ref"});
+  }
+  return options;
+}
+
+function getValueOption(variable) {
+  return variable['isRef'] ? "ref":"value";
+}
+
+function onValueOptionChange(variable, ev) {
+  variable['isRef'] = ev === 'ref';
+}
 </script>
 
 <template>
-  <h4 v-if="hasInput">输入变量</h4>
-  <List v-if="hasInput">
+  <h4>输入变量</h4>
+  <List>
     <ListItem v-for="variable in inputVariables">
-      <Input v-model:value="variable.name" size="small" placeholder="变量名" :disabled="!inputEditable || variable.mustExist"></Input>
-      <Select v-model:value="variable.type" :options="typeOptions" size="small" :disabled="!inputEditable"></Select>
-      <Input v-if="variable.type === 'string' && inputEditable" v-model:value="variable.value" size="small" placeholder="值"></Input>
-      <Cascader v-else-if="variable.type === 'ref' && inputEditable"
-                :options="refOptions" size="small"
-                @change="ev=>onRefOptionChange(variable, ev)" v-model:value="variable['refOption']"></Cascader>
+      <Input v-model:value="variable.name"
+             size="small"
+             placeholder="变量名"
+             :disabled="variable['required']"/>
+      <!--类型选择-->
+      <Select v-model:value="variable.type"
+              :options="getTypeOptions(variable)"
+              size="small"
+              :disabled="variable['fixed']"/>
+      <!--值选择-->
+      <Select :value="getValueOption(variable)"
+              :options="getValueOptions(variable)"
+              @change="ev=>onValueOptionChange(variable, ev)"/>
+      <!--引用-->
+      <Cascader v-if="variable['isRef']" size="small"
+                v-model:value="variable['refOption']"
+                :options="refOptions"
+                @change="ev=>onRefOptionChange(variable, ev)"/>
+      <!--字符串-->
+      <Input v-else v-model:value="variable['value']"/>
+
       <Button size="small"
-              v-if="!variable.mustExist && allowAddDelInput"
+              v-if="!variable['required'] && !variable['fixed']"
               @click="removeVariable(inputVariables, variable.name)"><DeleteFilled/></Button>
     </ListItem>
     <ListItem>
-      <Button v-if="allowAddDelInput" @click="addVariable(inputVariables)" size="mini">添加</Button>
+      <Button v-if="nodeData['allowAddInputVar']"
+              @click="addVariable(inputVariables)"
+              size="mini">添加</Button>
     </ListItem>
   </List>
-  <h4 v-if="hasOutput">输出变量</h4>
-  <List v-if="hasOutput">
+  <h4>输出变量</h4>
+  <List>
     <ListItem v-for="variable in outputVariables">
-      <Input v-model:value="variable.name" size="small" placeholder="变量名" :disabled="!outputEditable || variable.mustExist"></Input>
-      <Select v-model:value="variable.type" :options="typeOptions" size="small" :disabled="!outputEditable"></Select>
-      <Input v-if="variable.type === 'string' && outputEditable" v-model:value="variable.value" size="small" placeholder="值"></Input>
-      <Cascader v-else-if="variable.type === 'ref' && outputEditable"
-                :options="refOptions" size="small"
-                @change="ev=>onRefOptionChange(variable, ev)"></Cascader>
+      <Input v-model:value="variable.name"
+             size="small" placeholder="变量名"
+             :disabled="variable['required']"/>
+      <Select v-model:value="variable.type"
+              :options="getTypeOptions(variable)"
+              size="small"
+              :disabled="variable['fixed']"/>
       <Button size="small"
-              @click="removeVariable(outputVariables, variable.name)" v-if="allowAddDelOutput && !variable.mustExist"><DeleteFilled/></Button>
+              @click="removeVariable(outputVariables, variable.name)"
+              v-if="!variable['required']&&!variable['fixed']"><DeleteFilled/></Button>
     </ListItem>
     <ListItem>
-      <Button @click="addVariable(outputVariables)" size="mini" v-if="allowAddDelOutput">添加</Button>
+      <Button @click="addOutputVariable(outputVariables)"
+              size="mini"
+              v-if="nodeData['allowAddOutputVar']">添加</Button>
     </ListItem>
   </List>
 </template>

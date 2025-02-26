@@ -40,8 +40,7 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	case model.ApiTypeOpenAI:
 		llm, err = openai.New(openai.WithModel(detail.Code),
 			openai.WithBaseURL(detail.BaseUrl),
-			openai.WithToken(detail.ApiKey),
-			openai.WithResponseFormat(openai.ResponseFormatJSON))
+			openai.WithToken(detail.ApiKey))
 	case model.ApiTypeOllama:
 		llm, err = ollama.New(ollama.WithServerURL(detail.BaseUrl),
 			ollama.WithModel(detail.Code),
@@ -78,7 +77,7 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	} else if llmNodeData.OutputFormat == "TEXT" {
 		// 文本格式输出，需要转换成与输出变量表对于的JSON格式
 		for _, variable := range llmNodeData.OutputVariables {
-			if variable.Type == string(model.VariableTypeString) {
+			if variable.Type == model.VariableTypeString {
 				output = fmt.Sprintf("{\"%s\":\"%s\"}", variable.Name, output)
 				break
 			}

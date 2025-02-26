@@ -2,15 +2,21 @@
 import CommonSetting from "./CommonSetting.vue";
 import {Card, List, ListItem, Input, Select, Cascader, Button} from "ant-design-vue";
 import {DeleteOutlined} from "@ant-design/icons-vue";
-import types from "../types.js";
+import nodeConstants from "../nodeConstants.js";
 import {useVueFlow} from "@vue-flow/core";
+import {onMounted, ref} from "vue";
+import NodeUtil from "../../../util/nodeUtil.js";
 
-const props = defineProps(['node', 'refOptions']);
+const props = defineProps(['node']);
 const {getEdges, removeEdges} = useVueFlow();
 
 const varTypeOptions = [
-  {label: "引用", value: "ref"},
   {label: "string", value: "string"},
+  {label: "number", value: "number"},
+];
+const varValueOptions = [
+  {label: "值", value: "value"},
+  {label: "引用", value: "ref"},
 ];
 
 const operators = [
@@ -22,6 +28,24 @@ const operators = [
   {label: "小于等于", value: "<="},
 ];
 
+const refOptions = ref([]);
+
+onMounted(()=>{
+  refOptions.value = NodeUtil.getPrevNodesOutputs(props.node.id);
+  const nodeData = props.node.data["conditionNodeData"];
+  nodeData["branches"].forEach(branch=>{
+    if (branch["handle"] === "else") return;
+    branch['conditions'].forEach(condition=>{
+      if (condition['value1'].ref && condition['value1'].ref !== "") {
+        condition['value1']['refOption'] = condition['value1']['ref'].split('.');
+      }
+      if (condition['value2'].ref && condition['value2'].ref !== "") {
+        condition['value2']['refOption'] = condition['value2']['ref'].split('.');
+      }
+    });
+  });
+});
+
 function addCondition(branch) {
   branch.conditions.push({
     value1: {type: "string", value: ""},
@@ -32,7 +56,7 @@ function addCondition(branch) {
 
 function addBranch() {
   const branches = props.node.data['conditionNodeData']['branches'];
-  branches.splice(branches.length-1, 0, types.createBranch());
+  branches.splice(branches.length-1, 0, nodeConstants.createBranch());
 }
 
 function removeBranch(idx) {
@@ -53,8 +77,12 @@ function removeCondition(branch, idx, branchIdx) {
   }
 }
 
-function onValueTypeChange(ev) {
+function getVarValueType(variable) {
+  return variable.isRef ? "ref":"value";
+}
 
+function onVarValueTypeChange(variable, ev) {
+  variable.isRef = ev === "ref";
 }
 
 </script>
@@ -75,21 +103,33 @@ function onValueTypeChange(ev) {
           <!--操作数1-->
           <Select :options="varTypeOptions" v-model:value="condition.value1.type"
                   @change="_=>{condition.value1.value = '';}"/>
-          <Input v-if="condition.value1.type==='string'" v-model:value="condition.value1.value"/>
-          <Cascader v-else-if="condition.value1.type==='ref'"
+          <Select :options="varValueOptions"
+                  :value="getVarValueType(condition.value1)"
+                  @change="ev=>onVarValueTypeChange(condition.value1, ev)"/>
+          <Cascader v-if="condition.value1.isRef"
                     v-model:value="condition.value1.refOption"
-                    @change="ev=>{condition.value1.value = ev.join('.');}"
+                    @change="ev=>{condition.value1.ref = ev.join('.');}"
                     :options="refOptions"/>
+          <Input v-else-if="condition.value1.type==='string'"
+                 v-model:value="condition.value1.value"/>
+          <!--字符串-->
+          <Input v-else v-model:value="condition.value1['value']"/>
+
           <!--符号-->
           <Select :options="operators" v-model:value="condition.op"></Select>
           <!--操作数2-->
           <Select :options="varTypeOptions" v-model:value="condition.value2.type"
                   @change="_=>{condition.value1.value = '';}"/>
-          <Input v-if="condition.value2.type==='string'" v-model:value="condition.value2.value"/>
-          <Cascader v-else-if="condition.value2.type==='ref'"
+          <Select :options="varValueOptions"
+                  :value="getVarValueType(condition.value2)"
+                  @change="ev=>onVarValueTypeChange(condition.value2, ev)"/>
+
+          <Cascader v-if="condition.value2.isRef"
                     v-model:value="condition.value2.refOption"
-                    @change="ev=>{condition.value2.value = ev.join('.');}"
+                    @change="ev=>{condition.value2.ref = ev.join('.');}"
                     :options="refOptions"/>
+          <!--字符串-->
+          <Input v-else v-model:value="condition.value2['value']"/>
 
           <Button @click="removeCondition(branch, idx, branchIdx)"><DeleteOutlined/></Button>
         </ListItem>

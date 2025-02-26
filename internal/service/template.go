@@ -72,17 +72,20 @@ func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) 
 	return definition.Nodes[idx].Data.StartNodeData.InputVariables, nil
 }
 
-func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.NodeType) (*model.Node, error) {
+func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.NodeType) (string, error) {
+	var prototype *model.Node
 	switch nodeType {
 	case model.NodeTypeCondition:
-		return model.ConditionNodePrototype, nil
+		prototype = model.ConditionNodePrototype
 	case model.NodeTypeLLM:
-		return model.LLMNodePrototype, nil
+		prototype = model.LLMNodePrototype
 	case model.NodeTypeCrawler:
-		return model.CrawlerNodePrototype, nil
+		prototype = model.CrawlerNodePrototype
 	case model.NodeTypeKnowledgeRetrieval:
-		return model.KbRetrievalNodePrototype, nil
+		prototype = model.KbRetrievalNodePrototype
 	default:
-		return nil, errors.New("无效的节点类型")
+		return "", errors.New("无效的节点类型")
 	}
+	data, _ := json.Marshal(prototype)
+	return string(data), nil
 }

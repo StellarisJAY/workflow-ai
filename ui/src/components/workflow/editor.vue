@@ -1,19 +1,14 @@
 <script setup>
-import {onUpdated, ref, watch} from 'vue'
+import {ref, watch} from 'vue'
 import {ConnectionMode, MarkerType, Panel, Position, useVueFlow, VueFlow} from '@vue-flow/core'
 import {Background} from '@vue-flow/background';
 import {Button, Drawer, Input, message, Modal, PageHeader, Select} from 'ant-design-vue';
-import llmAPI from '../../api/llm';
 import templateAPI from '../../api/template.js';
-import workflowAPI from '../../api/workflow.js';
-import knowledgeBaseAPI from '../../api/knowledgeBase.js';
 import LlmSetting from './setting/LLMSetting.vue';
 import StartSetting from "./setting/StartSetting.vue";
-import NodeUtil from "../../util/nodeUtil.js";
 import EndSetting from "./setting/EndSetting.vue";
-import ExecutionLog from "../instance/executionLog.vue";
 import {useRoute, useRouter} from "vue-router";
-import types from "./types.js";
+import nodeConstants from "./nodeConstants.js";
 import CrawlerSetting from "./setting/CrawlerSetting.vue";
 import ConditionSetting from "./setting/ConditionSetting.vue";
 import {randomUUID} from "../../util/uuid.js";
@@ -22,14 +17,14 @@ import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
 const router = useRouter();
-const nodeTypeOptions = types.nodeTypeOptions;
-const edgeTypes = types.edgeTypes;
+const nodeTypeOptions = nodeConstants.nodeTypeOptions;
+const edgeTypes = nodeConstants.edgeTypes;
 const { onNodeClick, onConnect, onEdgesChange, onNodeDragStop,
   onNodesChange} = useVueFlow();
 
 const selectNodeType = ref("llm");
 
-const nodeTypes = types.nodeTypes;
+const nodeTypes = nodeConstants.nodeTypes;
 
 const nodes = ref([]);
 const edges = ref([]);
@@ -43,9 +38,10 @@ if (props.isNewTemplate) {
       position: { x: 100, y: 100 },
       data: {
         name: "开始",
+        defaultAllowVarTypes: ["string", "number"],
         startNodeData: {
           inputVariables: [
-            {name: "input", type: "string", "value": ""}
+            {name: "input", type: "string", value: "", allowRef: false, isRef: false}
           ]
         }
       }
@@ -53,6 +49,7 @@ if (props.isNewTemplate) {
     {
       id: "end",
       type: "end",
+      defaultAllowVarTypes: ["string", "number"],
       position: { x: 200, y: 100 },
       data: {
         name: "结束",
@@ -64,12 +61,12 @@ if (props.isNewTemplate) {
       }
     }
   ];
-}else if (props.template['data']) {
+} else if (props.template['data']) {
   const definition = JSON.parse(props.template['data']);
   nodes.value = definition.nodes;
   edges.value = definition.edges;
 }
-watch(()=>props.template, function (oldVal, newVal) {
+watch(()=>props.template, function () {
   const definition = JSON.parse(props.template['data']);
   nodes.value = definition.nodes;
   edges.value = definition.edges;
@@ -77,8 +74,6 @@ watch(()=>props.template, function (oldVal, newVal) {
 
 const newNodeModalOpen = ref(false);
 
-
-const executeLogDrawerOpen = ref(false);
 const llmDrawerOpen = ref(false);
 const knowledgeRetrievalDrawerOpen = ref(false);
 const knowledgeWriteDrawerOpen = ref(false);
@@ -87,23 +82,15 @@ const endDrawerOpen = ref(false);
 const crawlerDrawerOpen = ref(false);
 const conditionDrawerOpen = ref(false);
 
-const currentSettingNode = ref({});
 const currentSettingNodes = ref({});
-
-const llmList = ref([]);
-const llmOptions = ref([]);
-const settingRefOptions = ref([]);
-const kbList = ref([]);
-const kbOptions = ref([]);
 
 // 点击节点，弹出侧边设置
 onNodeClick(event => {
   const curNode = event.node;
-  settingRefOptions.value = getPrevNodesOutputs(curNode);
   currentSettingNodes.value[curNode.type] = curNode;
 	switch (curNode.type) {
-		case "llm": prepareLLMOptions(); break;
-		case "knowledgeRetrieval": prepareKbOptions(); break;
+		case "llm": llmDrawerOpen.value=true; break;
+		case "knowledgeRetrieval": knowledgeRetrievalDrawerOpen.value=true; break;
 		case "knowledgeWrite": knowledgeWriteDrawerOpen.value = true; break;
     case "start": startDrawerOpen.value = true; break;
     case "end": endDrawerOpen.value = true; break;
@@ -160,7 +147,7 @@ function addNode(nodeType) {
 		position: { x: 300, y: 200 },
 		data: {}
 	};
-	types.createNodeData(node);
+	nodeConstants.createNodeData(node);
 	nodes.value.push(node);
 }
 // 删除节点
@@ -184,7 +171,9 @@ function closeNewNodeModal() {
 }
 
 function openNewNodeModal() {
-	newNodeModalOpen.value = true;
+  nodeConstants.loadNodePrototypes().then(()=>{
+    newNodeModalOpen.value = true;
+  });
 }
 
 function newNodeConfirm() {
@@ -210,87 +199,6 @@ function updateTemplate() {
     message.error("更新失败");
   })
 }
-// 获取前驱节点的输出变量列表
-function getPrevNodesOutputs(currNode) {
-  const prevNodes = NodeUtil.getPrevNodes(currNode.id, nodes.value, edges.value);
-  let options = [];
-  prevNodes.forEach(node=>{
-    if (!node.data) return;
-    let outputVariables;
-    switch (node.type) {
-      case "llm": outputVariables = node.data['llmNodeData'].outputVariables; break;
-      case "start": outputVariables = node.data['startNodeData'].inputVariables; break;
-      case "end": outputVariables = node.data['endNodeData'].outputVariables; break;
-      case "crawler": outputVariables = node.data['crawlerNodeData'].outputVariables; break;
-    }
-    if (outputVariables) {
-      let option = {
-        label: node.data['name'],
-        value: node.id,
-        children: []
-      };
-      outputVariables.forEach(variable=>{
-        option.children.push({label: variable.name, value: variable.name});
-      });
-      options.push(option);
-    }
-  });
-  return options;
-}
-
-function prepareLLMOptions() {
-  llmAPI.listModels({paged: false}).then(resp=>{
-    llmList.value = resp.data;
-    const options = [];
-    llmList.value.forEach(item=>{
-      options.push({label: item.name, value: item.id});
-    });
-    llmOptions.value = options;
-    llmDrawerOpen.value = true;
-  });
-}
-
-function prepareKbOptions() {
-  knowledgeBaseAPI.list({paged: false}).then(resp=>{
-    kbList.value = resp.data;
-    const options = [];
-    kbList.value.forEach(item=>{
-      options.push({label: item.name, value: item.id});
-    });
-    kbOptions.value = options;
-    knowledgeRetrievalDrawerOpen.value = true;
-  })
-}
-
-const outputInterval = ref(0);
-const executeOutputs = ref([]);
-// 创建临时实例运行
-function execute() {
-  const request = {
-    inputs: {
-      input: ""
-    }
-  };
-  if (!props.isNewTemplate) {
-    request['templateId'] = props.template.id;
-  }else {
-    request['definition'] = getJSON();
-  }
-  workflowAPI.start(request).then(resp=>{
-    executeLogDrawerOpen.value = true;
-    outputInterval.value = setInterval(_=>getExecuteOutputs(resp.data['workflowId']), 1000);
-  });
-}
-
-function getExecuteOutputs(workflowId) {
-  workflowAPI.getOutputs(workflowId).then(resp=>{
-    executeOutputs.value = resp.data;
-    const endNode = resp.data.find(n=>n.type === 'end');
-    if (endNode) {
-      clearInterval(outputInterval.value);
-    }
-  });
-}
 </script>
 
 <template>
@@ -299,7 +207,6 @@ function getExecuteOutputs(workflowId) {
       <Input v-model:value="template.name"></Input>
 			<Button type="primary" @click="saveTemplate" v-if="isNewTemplate">保存</Button>
       <Button type="primary" v-else @click="updateTemplate">更新</Button>
-      <Button type="primary" success @click="execute">运行</Button>
 		</template>
 	</page-header>
 	<div style="height: 88vh;">
@@ -321,29 +228,46 @@ function getExecuteOutputs(workflowId) {
 		</template>
 	</Modal>
 
-	<Drawer title="大模型配置" size="default" :open="llmDrawerOpen" @close="_=>{llmDrawerOpen = false;}">
-    <LlmSetting v-model:node="currentSettingNodes['llm']" :ref-options="settingRefOptions"
-                :llm-list="llmList" :llm-options="llmOptions"/>
+	<Drawer title="大模型配置" size="large"
+          :open="llmDrawerOpen"
+          @close="_=>{llmDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <LlmSetting :node="currentSettingNodes['llm']"/>
 	</Drawer>
-	<Drawer title="知识库检索配置" size="default" :open="knowledgeRetrievalDrawerOpen" @close="_=>{knowledgeRetrievalDrawerOpen = false;}">
-    <KnowledgeRetrievalSetting :node="currentSettingNodes['knowledgeRetrieval']" :ref-options="settingRefOptions" :kb-options="kbOptions"/>
+	<Drawer title="知识库检索配置" size="large"
+          :open="knowledgeRetrievalDrawerOpen"
+          @close="_=>{knowledgeRetrievalDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <KnowledgeRetrievalSetting :node="currentSettingNodes['knowledgeRetrieval']"/>
   </Drawer>
-	<Drawer title="知识库写入配置" size="default" :open="knowledgeWriteDrawerOpen" @close="_=>{knowledgeWriteDrawerOpen = false;}"></Drawer>
-  <Drawer title="开始配置" size="default" :open="startDrawerOpen" @close="_=>{startDrawerOpen = false;}">
+	<Drawer title="知识库写入配置" size="large"
+          :open="knowledgeWriteDrawerOpen"
+          @close="_=>{knowledgeWriteDrawerOpen = false;}"
+          :destroy-on-close="true"></Drawer>
+  <Drawer title="开始配置" size="large"
+          :open="startDrawerOpen"
+          @close="_=>{startDrawerOpen = false;}"
+          :destroy-on-close="true">
     <start-setting v-model:node="currentSettingNodes['start']"/>
   </Drawer>
-  <Drawer title="结果配置" size="default" :open="endDrawerOpen" @close="_=>{endDrawerOpen = false;}">
+  <Drawer title="结果配置" size="large"
+          :open="endDrawerOpen"
+          @close="_=>{endDrawerOpen = false;}"
+          :destroy-on-close="true">
     <end-setting :output-variables="currentSettingNodes['end'].data['endNodeData'].outputVariables"
-                 :ref-options="settingRefOptions" :node="currentSettingNode"/>
+                 :node="currentSettingNodes['end']"/>
   </Drawer>
-  <Drawer title="爬虫配置" size="default" :open="crawlerDrawerOpen" @close="_=>{crawlerDrawerOpen = false;}">
-    <CrawlerSetting :ref-options="settingRefOptions" :node="currentSettingNodes['crawler']"/>
+  <Drawer title="爬虫配置" size="large"
+          :open="crawlerDrawerOpen"
+          @close="_=>{crawlerDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <CrawlerSetting :node="currentSettingNodes['crawler']"/>
   </Drawer>
-  <Drawer title="执行结果" size="default" :open="executeLogDrawerOpen" @close="_=>{executeLogDrawerOpen = false;}">
-    <execution-log :outputs="executeOutputs"></execution-log>
-  </Drawer>
-  <Drawer title="条件设置" size="large" :open="conditionDrawerOpen" @close="_=>{conditionDrawerOpen = false;}">
-    <ConditionSetting :ref-options="settingRefOptions" :node="currentSettingNodes['condition']"/>
+  <Drawer title="条件设置" size="large"
+          :open="conditionDrawerOpen"
+          @close="_=>{conditionDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <ConditionSetting :node="currentSettingNodes['condition']"/>
   </Drawer>
 </template>
 

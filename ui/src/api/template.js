@@ -18,5 +18,8 @@ export default {
     },
     getInputVariables: function(templateId) {
         return api.get("/template/start-variables/" + templateId);
+    },
+    getNodePrototype: function(nodeType) {
+        return api.get("/template/prototype?nodeType=" + nodeType);
     }
 }

@@ -1,9 +1,26 @@
 <script setup>
-import {FormItem, Textarea, Select, Slider, Input} from "ant-design-vue";
+import {FormItem, Textarea, Select, Slider} from "ant-design-vue";
 import VariableTable from "./VariableTable.vue";
-import types from "../types.js";
+import nodeConstants from "../nodeConstants.js";
 import CommonSetting from "./CommonSetting.vue";
-const props = defineProps(['node', 'llmList', 'refOptions', 'llmOptions']);
+import {onMounted, ref} from "vue";
+import llmAPI from "../../../api/llm.js";
+const props = defineProps(['node']);
+
+const llmList = ref([]);
+const llmOptions = ref([]);
+
+onMounted(()=>{
+  llmAPI.listModels({paged: false}).then(resp=>{
+    llmList.value = resp.data;
+    const options = [];
+    llmList.value.forEach(item=>{
+      options.push({label: item.name, value: item.id});
+    });
+    llmOptions.value = options;
+    llmDrawerOpen.value = true;
+  });
+});
 
 function onModelChange(modelId) {
   const llm = props.llmList.find(llm=>llm.id === modelId);
@@ -28,16 +45,13 @@ function onModelChange(modelId) {
     <Slider v-model:value="node.data['llmNodeData']['topP']" :min="0" :max="1" :step="0.1"></Slider>
   </FormItem>
   <FormItem label="输出格式">
-    <Select v-model:value="node.data['llmNodeData']['outputFormat']" :options="types.llmOutputFormatOptions"/>
+    <Select v-model:value="node.data['llmNodeData']['outputFormat']" :options="nodeConstants.llmOutputFormatOptions"/>
   </FormItem>
   <VariableTable :node-id="node.id"
-                 :has-input="true"
-                 :has-output="true"
                  :input-variables="node.data['llmNodeData'].inputVariables"
                  :output-variables="node.data['llmNodeData'].outputVariables"
-                 :ref-options="refOptions"
-                 :input-editable="true"
-                 :output-editable="true" :allow-add-del-output="true" :allow-add-del-input="true"/>
+                 :node-data="node.data"
+                 :node="node"/>
 </template>
 
 <style scoped>

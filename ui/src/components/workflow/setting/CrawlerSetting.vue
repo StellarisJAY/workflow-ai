@@ -2,21 +2,16 @@
 import VariableTable from "./VariableTable.vue";
 import CommonSetting from "./CommonSetting.vue";
 
-defineProps(['node', 'refOptions']);
+defineProps(['node']);
 </script>
 
 <template>
   <CommonSetting :node="node"/>
   <VariableTable :node-id="node.id"
-                 :has-input="true"
-                 :has-output="true"
+                 :node-data="node.data"
+                 :node="node"
                  :input-variables="node.data['crawlerNodeData'].inputVariables"
-                 :output-variables="node.data['crawlerNodeData'].outputVariables"
-                 :ref-options="refOptions"
-                 :input-editable="true"
-                 :output-editable="false"
-                 :allow-add-del-input="false"
-                 :allow-add-del-output="false"/>
+                 :output-variables="node.data['crawlerNodeData'].outputVariables"/>
 </template>
 
 <style scoped></style>

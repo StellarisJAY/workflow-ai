@@ -7,12 +7,9 @@ defineProps(['node']);
 <template>
   <VariableTable :input-variables="node.data['startNodeData'].inputVariables"
                  :output-variables="node.data['startNodeData'].outputVariables"
-                 :has-input="true"
-                 :has-output="false"
-                 :allow-ref="false"
                  :node-id="node.id"
-                 :input-editable="true"
-                 :output-editable="false" :allow-add-del-input="true"/>
+                 :node-data="node.data"
+                 :node="node"/>
 </template>
 
 <style scoped></style>

@@ -67,17 +67,17 @@ func (e *Engine) evaluateConditions(ctx context.Context, conditions []*model.Con
 	isAnd := connector == "and"
 	for _, condition := range conditions {
 		// 从变量实例表中获取变量值
-		value1, value1Type, err := e.getConditionVariableValue(ctx, condition.Value1, workflowId, definition)
+		value1, _, err := e.getConditionVariableValue(ctx, condition.Value1, workflowId, definition)
 		if err != nil {
 			return false, err
 		}
-		value2, value2Type, err := e.getConditionVariableValue(ctx, condition.Value2, workflowId, definition)
+		value2, _, err := e.getConditionVariableValue(ctx, condition.Value2, workflowId, definition)
 		if err != nil {
 			return false, err
 		}
-		if value1Type != value2Type {
-			return false, nil
-		}
+		//if value1Type != value2Type {
+		//	return false, nil
+		//}
 		success := false
 		switch condition.Op {
 		case "==":
@@ -104,11 +104,11 @@ func (e *Engine) evaluateConditions(ctx context.Context, conditions []*model.Con
 func (e *Engine) getConditionVariableValue(ctx context.Context, variable *model.Variable, workflowId int64,
 	definition *model.WorkflowDefinition) (string,
 	model.VariableType, error) {
-	varType := model.VariableType(variable.Type)
-	if varType != model.VariableTypeRef {
+	varType := variable.Type
+	if !variable.IsRef {
 		return variable.Value, varType, nil
 	}
-	parts := strings.Split(variable.Value, ".")
+	parts := strings.Split(variable.Ref, ".")
 	if len(parts) != 2 {
 		return "", varType, errors.New("invalid condition variable")
 	}
@@ -120,5 +120,5 @@ func (e *Engine) getConditionVariableValue(ctx context.Context, variable *model.
 	originNode := FindNodeById(definition, nodeId)
 	originVar := FindNodeOutputVariable(originNode, varName)
 	value = strings.Trim(value, "\"")
-	return value, model.VariableType(originVar.Type), nil
+	return value, originVar.Type, nil
 }

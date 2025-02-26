@@ -101,8 +101,8 @@ func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.
 	result := make(map[string]any)
 	nodeInstancesCache := make(map[string]*model.NodeInstance)
 	for _, variable := range variableDef {
-		if variable.Type == string(model.VariableTypeRef) {
-			parts := strings.Split(variable.Value, ".")
+		if variable.IsRef {
+			parts := strings.Split(variable.Ref, ".")
 			if len(parts) != 2 {
 				return nil, errors.New("变量来源格式错误")
 			}
@@ -122,7 +122,7 @@ func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.
 			if value, ok := inputMap[originVarName]; ok {
 				result[variable.Name] = value
 			}
-		} else if variable.Type == string(model.VariableTypeString) {
+		} else {
 			result[variable.Name] = variable.Value
 		}
 	}

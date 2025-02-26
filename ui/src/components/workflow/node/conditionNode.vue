@@ -8,15 +8,15 @@ const props = defineProps(['id', 'type', 'data']);
 const {findNode, nodesConnectable, nodesDraggable} = useVueFlow();
 const node = findNode(props.id);
 
-function opValueToHumanReadable(type, val) {
-  if (type === 'ref') {
-    const parts = val.split('.');
+function opValueToHumanReadable(variable) {
+  if (variable.isRef) {
+    const parts = variable['ref'].split('.');
     if (parts.length > 1) {
       const node = findNode(parts[0]);
       return node.data['name'] + "/" + parts[1];
     }
   }
-  return val;
+  return variable.value;
 }
 </script>
 
@@ -41,9 +41,9 @@ function opValueToHumanReadable(type, val) {
       <Handle :id="branch['handle']" type="source" :position="Position.Right"></Handle>
       <List v-for="(condition, i) in branch.conditions">
         <ListItem style="margin:2px; padding: 2px">
-          <Tag>{{opValueToHumanReadable(condition.value1.type, condition.value1.value)}}</Tag>
+          <Tag>{{opValueToHumanReadable(condition.value1)}}</Tag>
           <Tag>{{condition.op}}</Tag>
-          <Tag>{{opValueToHumanReadable(condition.value2.type, condition.value2.value)}}</Tag>
+          <Tag>{{opValueToHumanReadable(condition.value2)}}</Tag>
         </ListItem>
         <ListItem v-if="i < branch.conditions.length-1" style="margin:2px; padding: 2px">
           {{branch['connector']}}

@@ -1,34 +1,28 @@
 <script setup>
 import {Button, Cascader, Input, List, ListItem, Select} from "ant-design-vue";
 import {DeleteFilled} from "@ant-design/icons-vue";
-import {watch} from "vue";
+import {onMounted, ref} from "vue";
+import NodeUtil from "../../../util/nodeUtil.js";
 
-const props = defineProps(['node', 'outputVariables', 'refOptions']);
+const props = defineProps(['node', 'outputVariables']);
+const refOptions = ref([]);
 
-watch(_=>props.outputVariables, ()=>{
+onMounted(()=>{
+  refOptions.value = NodeUtil.getPrevNodesOutputs(props.node.id);
+  console.log(refOptions.value);
   props.outputVariables.forEach(variable => {
-    if (variable.type === "ref") {
-      variable['refOption'] = variable.value.split('.');
+    if (variable.isRef) {
+      variable['refOption'] = variable.ref.split('.');
     }
   });
 });
 
-props.outputVariables.forEach(variable => {
-  if (variable.type === "ref") {
-    variable['refOption'] = variable.value.split('.');
-  }
-});
-
-const typeOptions = [
-  {label: "string", value: "string"},
-  {label: "引用", value: "ref"},
-];
 function onRefOptionChange(variable, ev) {
-  variable.value = ev[0] + "." + ev[1];
+  variable.ref = ev[0] + "." + ev[1];
 }
 
 function addVariable(target) {
-  target.push({name: "", value: "", type: "string"});
+  target.push({name: "variable", value: "", isRef: true, ref: ""});
 }
 
 function removeVariable(target, name) {
@@ -42,10 +36,7 @@ function removeVariable(target, name) {
   <List>
     <ListItem v-for="variable in outputVariables">
       <Input v-model:value="variable.name" size="small" placeholder="变量名"></Input>
-      <Select v-model:value="variable.type" :options="typeOptions" size="small"></Select>
-      <Input v-if="variable.type === 'string'" v-model:value="variable.value" size="small" placeholder="值"></Input>
-      <Cascader v-else-if="variable.type === 'ref'"
-                :options="refOptions" size="small"
+      <Cascader :options="refOptions" size="small"
                 @change="ev=>onRefOptionChange(variable, ev)" v-model:value="variable.refOption"></Cascader>
       <Button size="small"
               @click="removeVariable(outputVariables, variable.name)"><DeleteFilled/></Button>

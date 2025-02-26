@@ -9,7 +9,7 @@ import workflowAPI from '../../api/workflow.js';
 import {ReloadOutlined} from "@ant-design/icons-vue";
 import {useVueFlow, VueFlow} from "@vue-flow/core";
 import {Background} from "@vue-flow/background";
-import types from './types.js';
+import nodeConstants from './nodeConstants.js';
 import ExecutionLog from "../instance/executionLog.vue";
 import TimeUtil from "../../util/timeUtil.js";
 import NodeStatusTag from "./node/nodeStatusTag.vue";

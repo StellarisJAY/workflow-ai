@@ -17,8 +17,6 @@ type VariableType string
 const (
 	VariableTypeNumber      VariableType = "number"
 	VariableTypeString      VariableType = "string"
-	VariableTypeFile        VariableType = "file"
-	VariableTypeRef         VariableType = "ref" // 引用其他节点的变量, 值为 节点ID.变量名
 	VariableTypeStringArray VariableType = "array_str"
 	VariableTypeNumberArray VariableType = "array_num"
 )
@@ -43,6 +41,9 @@ type Node struct {
 
 type NodeData struct {
 	Name                          string                         `json:"name"`
+	AllowAddInputVar              bool                           `json:"allowAddInputVar"`
+	AllowAddOutputVar             bool                           `json:"allowAddOutputVar"`
+	DefaultAllowVarTypes          []VariableType                 `json:"defaultAllowVarTypes"`
 	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
 	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`
 	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
@@ -86,13 +87,15 @@ type StartNodeData struct {
 }
 
 type Variable struct {
-	Type         string         `json:"type"`         // 变量类型
+	Type         VariableType   `json:"type"`         // 变量类型
 	Name         string         `json:"name"`         // 变量名
 	Value        string         `json:"value"`        // 变量值
 	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
 	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
-	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
-	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
+	AllowRef     bool           `json:"allowRef"`
+	IsRef        bool           `json:"isRef"`
+	Required     bool           `json:"required"` // 是否必填, 必填后不可删除
+	Fixed        bool           `json:"fixed"`    // 是否固定, 固定后不可修改
 }
 
 type EndNodeData struct {
@@ -127,12 +130,23 @@ type ConditionNodeOutput struct {
 var ConditionNodePrototype = &Node{
 	Type: string(NodeTypeCondition),
 	Data: NodeData{
+		Name:                 "条件",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
 		ConditionNodeData: &ConditionNodeData{
 			Branches: []*ConditionNodeBranch{
 				{
-					Handle:     "if",
-					Connector:  "and",
-					Conditions: []*Condition{},
+					Handle:    "if",
+					Connector: "and",
+					Conditions: []*Condition{
+						{
+							Value1: &Variable{Value: "0", Type: VariableTypeNumber},
+							Value2: &Variable{Value: "0", Type: VariableTypeNumber},
+							Op:     "==",
+						},
+					},
+				},
+				{
+					Handle: "else",
 				},
 			},
 		},
@@ -142,9 +156,15 @@ var ConditionNodePrototype = &Node{
 var LLMNodePrototype = &Node{
 	Type: string(NodeTypeLLM),
 	Data: NodeData{
+		Name:                 "大模型",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
+		AllowAddInputVar:     true,
+		AllowAddOutputVar:    true,
 		LLMNodeData: &LLMNodeData{
-			Prompt:          "",
-			InputVariables:  []*Variable{},
+			Prompt: "",
+			InputVariables: []*Variable{
+				{Name: "input", Value: "", Type: VariableTypeString, AllowRef: true},
+			},
 			OutputFormat:    "JSON",
 			OutputVariables: []*Variable{},
 			Temperature:     0.5,
@@ -156,17 +176,21 @@ var LLMNodePrototype = &Node{
 var KbRetrievalNodePrototype = &Node{
 	Type: string(NodeTypeKnowledgeRetrieval),
 	Data: NodeData{
+		Name:                 "知识库检索",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
 		RetrieveKnowledgeBaseNodeData: &RetrieveKnowledgeBaseNodeData{
 			SearchType:          KbSearchTypeSimilarity,
 			Count:               10,
 			SimilarityThreshold: 0.8,
 			OptimizeQuery:       false,
 			InputVariables: []*Variable{
-				{Name: "query", Type: string(VariableTypeString), Required: true, Fixed: true}, // 检索内容
+				{Name: "query", Type: VariableTypeString, Required: true, Fixed: true, AllowRef: true}, // 检索内容
 			},
 			OutputVariables: []*Variable{
-				{Name: "total", Type: string(VariableTypeNumber), Required: true, Fixed: true},          // 检索到的文档总数
-				{Name: "documents", Type: string(VariableTypeStringArray), Required: true, Fixed: true}, // 文档列表
+				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},          // 检索到的文档总数
+				{Name: "documents", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 文档列表
 			},
 		},
 	},
@@ -175,15 +199,20 @@ var KbRetrievalNodePrototype = &Node{
 var CrawlerNodePrototype = &Node{
 	Type: string(NodeTypeCrawler),
 	Data: NodeData{
+		Name:                 "HTTP请求",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
 		CrawlerNodeData: &CrawlerNodeData{
 			InputVariables: []*Variable{
-				{Name: "url", Type: string(VariableTypeString), Required: true, Fixed: true}, // 网页url
+				{Name: "url", Type: VariableTypeString, Required: true, AllowRef: true}, // 网页url
 			},
 			OutputVariables: []*Variable{
-				{Name: "code", Type: string(VariableTypeNumber), Required: true, Fixed: true},        // HTTP状态码
-				{Name: "message", Type: string(VariableTypeString), Required: true, Fixed: true},     // HTTP状态码描述
-				{Name: "data", Type: string(VariableTypeString), Required: true, Fixed: true},        // 网页内容
-				{Name: "contentType", Type: string(VariableTypeString), Required: true, Fixed: true}, // 网页内容类型
+				{Name: "code", Type: VariableTypeNumber, Required: true, Fixed: true},        // HTTP状态码
+				{Name: "message", Type: VariableTypeString, Required: true, Fixed: true},     // HTTP状态码描述
+				{Name: "data", Type: VariableTypeString, Required: true, Fixed: true},        // 网页内容
+				{Name: "contentType", Type: VariableTypeString, Required: true, Fixed: true}, // 网页内容类型
+
 			},
 		},
 	},
