@@ -9,7 +9,6 @@ const refOptions = ref([]);
 
 onMounted(()=>{
   refOptions.value = NodeUtil.getPrevNodesOutputs(props.node.id);
-  console.log(refOptions.value);
   props.outputVariables.forEach(variable => {
     if (variable.isRef) {
       variable['refOption'] = variable.ref.split('.');

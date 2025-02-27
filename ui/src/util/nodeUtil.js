@@ -14,6 +14,8 @@ const NodeUtil = {
         return Array.from(new Set(prevNodes));
     },
     getPrevNodesOutputs: getPrevNodesOutputs,
+    resetInputVariableRef: resetInputVariableRef,
+    resetOutputVariableRef: resetOutputVariableRef,
 }
 
 function getPrevNodesRecursive(nodeId, nodes, edges, prevNodes) {
@@ -59,6 +61,34 @@ function getPrevNodesOutputs(currNodeId) {
         }
     });
     return options;
+}
+
+/**
+ * 删除节点或连线导致引用失效，重置节点输入变量列表的引用
+ * @param nodeData 节点数据
+ * @param needReset 通过变量引用的节点id判断是否需要重置的函数
+ */
+function resetInputVariableRef(nodeData, needReset) {
+    nodeData.inputVariables.forEach(variable=>variableReset(variable, needReset));
+}
+/**
+ * 删除节点或连线导致引用失效，重置节点输出变量列表的引用
+ * @param nodeData 节点数据
+ * @param needReset 通过变量引用的节点id判断是否需要重置的函数
+ */
+function resetOutputVariableRef(nodeData, needReset) {
+    nodeData.outputVariables.forEach(variable=>variableReset(variable, needReset));
+}
+
+function variableReset(variable, needReset) {
+    if (variable.isRef) {
+        const ref = variable.ref.split(".");
+        if (ref.length === 2 && needReset(ref[0])) {
+            variable.isRef = true;
+            variable.ref = "";
+            variable.refOption = [];
+        }
+    }
 }
 
 export default NodeUtil;

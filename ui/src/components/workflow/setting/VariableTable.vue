@@ -9,7 +9,7 @@ const refOptions = ref([]);
 onMounted(()=>{
   refOptions.value = NodeUtil.getPrevNodesOutputs(props.nodeId);
   props.inputVariables.forEach(variable => {
-    if (variable.ref && variable.ref !== "") {
+    if (variable.ref) {
       variable['refOption'] = variable['ref'].split('.');
     }
   });
@@ -76,22 +76,25 @@ function onValueOptionChange(variable, ev) {
              size="small"
              placeholder="变量名"
              :disabled="variable['required']"/>
-      <!--类型选择-->
-      <Select v-model:value="variable.type"
-              :options="getTypeOptions(variable)"
-              size="small"
-              :disabled="variable['fixed']"/>
       <!--值选择-->
-      <Select :value="getValueOption(variable)"
+      <Select :value="getValueOption(variable)" size="small"
               :options="getValueOptions(variable)"
               @change="ev=>onValueOptionChange(variable, ev)"/>
+      <div v-if="!variable.isRef">
+        <!--类型选择-->
+        <Select v-model:value="variable.type"
+                :options="getTypeOptions(variable)"
+                size="small"
+                :disabled="variable['fixed']"/>
+        <!--字符串-->
+        <Input v-model:value="variable['value']" size="small"/>
+      </div>
+
       <!--引用-->
-      <Cascader v-if="variable['isRef']" size="small"
+      <Cascader v-else size="small"
                 v-model:value="variable['refOption']"
                 :options="refOptions"
                 @change="ev=>onRefOptionChange(variable, ev)"/>
-      <!--字符串-->
-      <Input v-else v-model:value="variable['value']"/>
 
       <Button size="small"
               v-if="!variable['required'] && !variable['fixed']"

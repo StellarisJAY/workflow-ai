@@ -13,6 +13,7 @@ import CrawlerSetting from "./setting/CrawlerSetting.vue";
 import ConditionSetting from "./setting/ConditionSetting.vue";
 import {randomUUID} from "../../util/uuid.js";
 import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
+import NodeConstants from "./nodeConstants.js";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -153,10 +154,20 @@ function addNode(nodeType) {
 // 删除节点
 function removeNode(id) {
 	nodes.value = nodes.value.filter(n => n.id !== id);
+  dispatchEvent(new CustomEvent(NodeConstants.deleteNodeEvent, {
+    detail: {
+      nodeId: id,
+    }
+  }));
 }
 // 删除连线
 function removeEdge(id) {
 	edges.value = edges.value.filter(e=>e.id !== id);
+  dispatchEvent(new CustomEvent(NodeConstants.deleteEdgeEvent, {
+    detail: {
+      edgeId: id,
+    }
+  }));
 }
 // 获取流程模板JSON
 function getJSON() {

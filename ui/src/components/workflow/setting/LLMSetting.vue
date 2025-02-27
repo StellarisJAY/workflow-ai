@@ -18,7 +18,6 @@ onMounted(()=>{
       options.push({label: item.name, value: item.id});
     });
     llmOptions.value = options;
-    llmDrawerOpen.value = true;
   });
 });
 

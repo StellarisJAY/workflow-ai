@@ -3,10 +3,30 @@ import {Handle, Position, useVueFlow} from '@vue-flow/core';
 import {FormItem, Card} from "ant-design-vue";
 import NodeExtra from "./nodeExtra.vue";
 import NodeVariableDisplay from "./nodeVariableDisplay.vue";
+import {onMounted} from "vue";
+import NodeConstants from "../nodeConstants.js";
+import NodeUtil from "../../../util/nodeUtil.js";
 
 const props = defineProps(['id', 'type', 'data']);
-const {findNode} = useVueFlow();
+const {findNode, getNodes, getEdges} = useVueFlow();
 const node = findNode(props.id);
+
+onMounted(()=>{
+  addEventListener(NodeConstants.deleteNodeEvent, ev=>onNodeDelete(ev));
+  addEventListener(NodeConstants.deleteEdgeEvent, ev=>onEdgeDelete(ev));
+});
+
+function onNodeDelete(ev) {
+  const crawlerNodeData = props.data["llmNodeData"];
+  NodeUtil.resetInputVariableRef(crawlerNodeData, id=>ev.detail.id === id);
+}
+
+function onEdgeDelete(ev) {
+  // 获取所有前驱节点，通过判断变量引用节点是否在前驱节点列表判断是否需要重置引用
+  const prevNodes = NodeUtil.getPrevNodes(props.id, getNodes.value, getEdges.value).map(node=>node.id);
+  const crawlerNodeData = props.data["llmNodeData"];
+  NodeUtil.resetInputVariableRef(crawlerNodeData, id=>!prevNodes.includes(id));
+}
 </script>
 
 <template>

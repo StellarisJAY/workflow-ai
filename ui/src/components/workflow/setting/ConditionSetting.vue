@@ -6,6 +6,7 @@ import nodeConstants from "../nodeConstants.js";
 import {useVueFlow} from "@vue-flow/core";
 import {onMounted, ref} from "vue";
 import NodeUtil from "../../../util/nodeUtil.js";
+import NodeConstants from "../nodeConstants.js";
 
 const props = defineProps(['node']);
 const {getEdges, removeEdges} = useVueFlow();
@@ -100,36 +101,39 @@ function onVarValueTypeChange(variable, ev) {
       </template>
       <List v-if="branchIdx < node.data['conditionNodeData']['branches'].length-1">
         <ListItem v-for="(condition, idx) in branch['conditions']">
-          <!--操作数1-->
-          <Select :options="varTypeOptions" v-model:value="condition.value1.type"
-                  @change="_=>{condition.value1.value = '';}"/>
           <Select :options="varValueOptions"
                   :value="getVarValueType(condition.value1)"
                   @change="ev=>onVarValueTypeChange(condition.value1, ev)"/>
-          <Cascader v-if="condition.value1.isRef"
+          <div v-if="!condition.value1.isRef">
+            <!--操作数1-->
+            <Select :options="varTypeOptions" v-model:value="condition.value1.type"
+                    @change="_=>{condition.value1.value = '';}"/>
+            <!--字符串-->
+            <Input v-model:value="condition.value1['value']"/>
+          </div>
+          <Cascader v-else
                     v-model:value="condition.value1.refOption"
                     @change="ev=>{condition.value1.ref = ev.join('.');}"
                     :options="refOptions"/>
-          <Input v-else-if="condition.value1.type==='string'"
-                 v-model:value="condition.value1.value"/>
-          <!--字符串-->
-          <Input v-else v-model:value="condition.value1['value']"/>
+
 
           <!--符号-->
           <Select :options="operators" v-model:value="condition.op"></Select>
-          <!--操作数2-->
-          <Select :options="varTypeOptions" v-model:value="condition.value2.type"
-                  @change="_=>{condition.value1.value = '';}"/>
+
           <Select :options="varValueOptions"
                   :value="getVarValueType(condition.value2)"
                   @change="ev=>onVarValueTypeChange(condition.value2, ev)"/>
-
-          <Cascader v-if="condition.value2.isRef"
+          <div v-if="!condition.value2.isRef">
+            <!--操作数1-->
+            <Select :options="varTypeOptions" v-model:value="condition.value2.type"
+                    @change="_=>{condition.value2.value = '';}"/>
+            <!--字符串-->
+            <Input v-model:value="condition.value2['value']"/>
+          </div>
+          <Cascader v-else
                     v-model:value="condition.value2.refOption"
                     @change="ev=>{condition.value2.ref = ev.join('.');}"
                     :options="refOptions"/>
-          <!--字符串-->
-          <Input v-else v-model:value="condition.value2['value']"/>
 
           <Button @click="removeCondition(branch, idx, branchIdx)"><DeleteOutlined/></Button>
         </ListItem>

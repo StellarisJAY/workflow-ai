@@ -9,16 +9,17 @@ const (
 	NodeTypeKnowledgeWrite     NodeType = "knowledgeWrite"     // 写入知识库节点
 	NodeTypeEnd                NodeType = "end"                // 结束节点
 	NodeTypeCrawler            NodeType = "crawler"            // 爬虫节点
-	NodeTypeCondition          NodeType = "condition"
+	NodeTypeCondition          NodeType = "condition"          // 条件判断节点
+	NodeTypeKeywordExtraction  NodeType = "keywordExtraction"  // 关键词提取节点
 )
 
 type VariableType string
 
 const (
-	VariableTypeNumber      VariableType = "number"
-	VariableTypeString      VariableType = "string"
-	VariableTypeStringArray VariableType = "array_str"
-	VariableTypeNumberArray VariableType = "array_num"
+	VariableTypeNumber      VariableType = "number"    // 数值类型
+	VariableTypeString      VariableType = "string"    // 字符串类型
+	VariableTypeStringArray VariableType = "array_str" // 字符串数组类型
+	VariableTypeNumberArray VariableType = "array_num" // 数值数组类型
 )
 
 type KbSearchType string
@@ -41,16 +42,16 @@ type Node struct {
 
 type NodeData struct {
 	Name                          string                         `json:"name"`
-	AllowAddInputVar              bool                           `json:"allowAddInputVar"`
-	AllowAddOutputVar             bool                           `json:"allowAddOutputVar"`
-	DefaultAllowVarTypes          []VariableType                 `json:"defaultAllowVarTypes"`
-	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`
-	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`
-	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"`
-	StartNodeData                 *StartNodeData                 `json:"startNodeData"`
-	EndNodeData                   *EndNodeData                   `json:"endNodeData"`
-	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`
-	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`
+	AllowAddInputVar              bool                           `json:"allowAddInputVar"`              // 是否允许添加输入变量
+	AllowAddOutputVar             bool                           `json:"allowAddOutputVar"`             // 是否允许添加输出变量
+	DefaultAllowVarTypes          []VariableType                 `json:"defaultAllowVarTypes"`          // 默认允许的变量类型
+	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`                   // 大模型节点数据
+	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`    // 写入知识库节点数据
+	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"` // 检索知识库节点数据
+	StartNodeData                 *StartNodeData                 `json:"startNodeData"`                 // 开始节点数据
+	EndNodeData                   *EndNodeData                   `json:"endNodeData"`                   // 结束节点数据
+	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`               // 爬虫节点数据
+	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`             // 条件判断节点数据
 }
 
 // LLMNodeData LLM节点数据
@@ -92,10 +93,10 @@ type Variable struct {
 	Value        string         `json:"value"`        // 变量值
 	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
 	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
-	AllowRef     bool           `json:"allowRef"`
-	IsRef        bool           `json:"isRef"`
-	Required     bool           `json:"required"` // 是否必填, 必填后不可删除
-	Fixed        bool           `json:"fixed"`    // 是否固定, 固定后不可修改
+	AllowRef     bool           `json:"allowRef"`     // 是否允许引用
+	IsRef        bool           `json:"isRef"`        // 是否引用
+	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
+	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
 }
 
 type EndNodeData struct {
@@ -114,8 +115,8 @@ type Condition struct {
 }
 
 type ConditionNodeBranch struct {
-	Handle     string       `json:"handle"`
-	Connector  string       `json:"connector"`
+	Handle     string       `json:"handle"`    // 分支唯一ID
+	Connector  string       `json:"connector"` // 条件连接 and or
 	Conditions []*Condition `json:"conditions"`
 }
 
@@ -127,6 +128,7 @@ type ConditionNodeOutput struct {
 	SuccessBranch string `json:"successBranch"`
 }
 
+// ConditionNodePrototype 条件判断节点原型
 var ConditionNodePrototype = &Node{
 	Type: string(NodeTypeCondition),
 	Data: NodeData{
@@ -153,6 +155,7 @@ var ConditionNodePrototype = &Node{
 	},
 }
 
+// LLMNodePrototype 大模型节点原型
 var LLMNodePrototype = &Node{
 	Type: string(NodeTypeLLM),
 	Data: NodeData{
@@ -205,7 +208,7 @@ var CrawlerNodePrototype = &Node{
 		AllowAddOutputVar:    false,
 		CrawlerNodeData: &CrawlerNodeData{
 			InputVariables: []*Variable{
-				{Name: "url", Type: VariableTypeString, Required: true, AllowRef: true}, // 网页url
+				{Name: "url", Type: VariableTypeString, Required: true, AllowRef: true, AllowedTypes: []VariableType{VariableTypeString}}, // 网页url
 			},
 			OutputVariables: []*Variable{
 				{Name: "code", Type: VariableTypeNumber, Required: true, Fixed: true},        // HTTP状态码
@@ -213,6 +216,25 @@ var CrawlerNodePrototype = &Node{
 				{Name: "data", Type: VariableTypeString, Required: true, Fixed: true},        // 网页内容
 				{Name: "contentType", Type: VariableTypeString, Required: true, Fixed: true}, // 网页内容类型
 
+			},
+		},
+	},
+}
+
+var KeywordExtractionNodePrototype = &Node{
+	Type: string(NodeTypeKeywordExtraction),
+	Data: NodeData{
+		Name:                 "关键词提取",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
+		CrawlerNodeData: &CrawlerNodeData{
+			InputVariables: []*Variable{
+				{Name: "question", Type: VariableTypeString, Required: true, AllowRef: true}, // 问题
+			},
+			OutputVariables: []*Variable{
+				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 关键词数量
+				{Name: "keywords", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 关键词列表
 			},
 		},
 	},

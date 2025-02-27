@@ -84,4 +84,6 @@ export default {
     createBranch: createBranch,
     loadNodePrototypes: loadNodePrototypes,
     nodePrototypes: nodePrototypes,
+    deleteNodeEvent: "delete-node-event",
+    deleteEdgeEvent: "delete-edge-event",
 };
