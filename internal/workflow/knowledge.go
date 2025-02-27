@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -44,7 +45,12 @@ func (e *Engine) executeKnowledgeRetrieveNode(ctx context.Context, node *model.N
 	}
 	// TODO 输出格式转换
 	output := make(map[string]any)
-	output["result"] = result
+	output["total"] = strconv.Itoa(len(result))
+	documents := make([]string, len(result))
+	for i, document := range result {
+		documents[i] = document.Content
+	}
+	output["documents"] = documents
 	data, _ := json.Marshal(output)
 	nodeInstance.Output = string(data)
 	nodeInstance.Status = model.NodeInstanceStatusCompleted

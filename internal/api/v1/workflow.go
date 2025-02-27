@@ -32,19 +32,6 @@ func (w *WorkflowHandler) Start(c *gin.Context) {
 	}{WorkflowId: workflowId}))
 }
 
-func (w *WorkflowHandler) Outputs(c *gin.Context) {
-	param := c.Param("id")
-	workflowId, err := strconv.ParseInt(param, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	outputs, err := w.service.Outputs(c, workflowId)
-	if err != nil {
-		panic(err)
-	}
-	c.JSON(200, common.NewSuccessResponse(outputs))
-}
-
 func (w *WorkflowHandler) List(c *gin.Context) {
 	list, total, err := w.service.ListWorkflowInstance(c)
 	if err != nil {
@@ -78,4 +65,16 @@ func (w *WorkflowHandler) GetNodeInstanceDetail(c *gin.Context) {
 		panic(err)
 	}
 	c.JSON(200, common.NewSuccessResponse(instance))
+}
+
+func (w *WorkflowHandler) GetWorkflowTimeline(c *gin.Context) {
+	workflowId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	timeline, err := w.service.GetWorkflowTimeline(c, workflowId)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(timeline))
 }

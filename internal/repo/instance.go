@@ -95,17 +95,6 @@ func (i *InstanceRepo) UpdateWorkflowInstance(ctx context.Context, instance *mod
 		}).Error
 }
 
-func (i *InstanceRepo) GetNodeInstanceOutputs(ctx context.Context, workflowId int64) ([]*model.NodeInstanceOutputDTO, error) {
-	var outputs []*model.NodeInstanceOutputDTO
-	err := i.DB(ctx).Table(model.NodeInstance{}.TableName()).
-		Select("id, node_id, output, error, status, add_time, complete_time").
-		WithContext(ctx).
-		Where("workflow_id =?", workflowId).
-		Where("status != ?", model.NodeInstanceStatusRunning).
-		Scan(&outputs).Error
-	return outputs, err
-}
-
 func (i *InstanceRepo) GetWorkflowDefinition(ctx context.Context, workflowId int64) (string, error) {
 	var definition string
 	err := i.DB(ctx).Table(model.WorkflowInstance{}.TableName()).
@@ -159,14 +148,24 @@ func (i *InstanceRepo) GetOutputVariableFromNodeInstance(ctx context.Context, no
 	return output, err
 }
 
-func (i *InstanceRepo) GetConditionNodeBranch(ctx context.Context, workflowId int64) ([]string, error) {
-	var result []string
+func (i *InstanceRepo) GetConditionNodeBranch(ctx context.Context, workflowId int64) ([]*model.WorkflowInstanceSuccessBranchDTO, error) {
+	var result []*model.WorkflowInstanceSuccessBranchDTO
 	err := i.DB(ctx).Table(model.NodeInstance{}.TableName()).
-		Select("JSON_EXTRACT(output, \"$.successBranch\") AS branch").
+		Select("JSON_EXTRACT(output, \"$.successBranch\") AS branch, node_id").
 		Where("workflow_id =?", workflowId).
 		Where("status = ?", model.NodeInstanceStatusCompleted).
 		Where("type = ?", "condition").
 		WithContext(ctx).
 		Find(&result).Error
+	return result, err
+}
+
+func (i *InstanceRepo) GetWorkflowTimeline(ctx context.Context, workflowId int64) ([]*model.WorkflowInstanceTimelineDTO, error) {
+	var result []*model.WorkflowInstanceTimelineDTO
+	err := i.DB(ctx).Table(model.WorkflowInstance{}.TableName()).
+		Select("id, node_id, node_name, add_time, complete_time, status").
+		Where("workflow_id = ?", workflowId).
+		Find(&result).
+		Error
 	return result, err
 }

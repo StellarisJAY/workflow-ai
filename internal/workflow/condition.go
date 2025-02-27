@@ -4,13 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
+	"log"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func (e *Engine) executeConditionNode(ctx context.Context, node *model.Node, nodeData *model.ConditionNodeData,
 	nodeInstance *model.NodeInstance) error {
+	defer func() {
+		if err := recover(); err != nil {
+			nodeInstance.Status = model.NodeInstanceStatusFailed
+			nodeInstance.Error = err.(error).Error()
+			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
+				log.Println("update kb node instance error:", err)
+			}
+		}
+	}()
 	branches := nodeData.Branches
 	// 获取流程定义
 	data, _ := e.instanceRepo.GetWorkflowDefinition(ctx, nodeInstance.WorkflowId)
@@ -67,28 +79,27 @@ func (e *Engine) evaluateConditions(ctx context.Context, conditions []*model.Con
 	isAnd := connector == "and"
 	for _, condition := range conditions {
 		// 从变量实例表中获取变量值
-		value1, _, err := e.getConditionVariableValue(ctx, condition.Value1, workflowId, definition)
+		value1, value1Type, err := e.getConditionVariableValue(ctx, condition.Value1, workflowId, definition)
 		if err != nil {
 			return false, err
 		}
-		value2, _, err := e.getConditionVariableValue(ctx, condition.Value2, workflowId, definition)
+		value2, value2Type, err := e.getConditionVariableValue(ctx, condition.Value2, workflowId, definition)
 		if err != nil {
 			return false, err
 		}
-		//if value1Type != value2Type {
-		//	return false, nil
-		//}
+		if value1Type != value2Type {
+			return false, fmt.Errorf("condition variable value type mismatch %s, %s", value1Type, value2Type)
+		}
 		success := false
-		switch condition.Op {
-		case "==":
-			success = value1 == value2
-		case "!=":
-			success = value1 != value2
-		case ">": // TODO 大小比较
-		case "<":
-		case ">=":
-		case "<=":
+		switch value1Type {
+		case model.VariableTypeString:
+			success, err = compareString(condition.Op, value1, value2)
+		case model.VariableTypeNumber:
+			success, err = compareNumber(condition.Op, value1, value2)
+		default:
+			return false, fmt.Errorf("value type not supported: %s", value1Type)
 		}
+
 		// 或 连接只需要一个条件满足
 		if success && !isAnd {
 			return true, nil
@@ -121,4 +132,50 @@ func (e *Engine) getConditionVariableValue(ctx context.Context, variable *model.
 	originVar := FindNodeOutputVariable(originNode, varName)
 	value = strings.Trim(value, "\"")
 	return value, originVar.Type, nil
+}
+
+func compareNumber(op string, value1, value2 string) (bool, error) {
+	val1, err := strconv.ParseFloat(value1, 64)
+	if err != nil {
+		return false, fmt.Errorf("invalid number: %s", value1)
+	}
+	val2, err := strconv.ParseFloat(value2, 64)
+	if err != nil {
+		return false, fmt.Errorf("invalid number: %s", value2)
+	}
+	switch op {
+	case "==":
+		return val1 == val2, nil
+	case "!=":
+		return val1 != val2, nil
+	case ">":
+		return val1 > val2, nil
+	case "<":
+		return val1 < val2, nil
+	case ">=":
+		return val1 >= val2, nil
+	case "<=":
+		return val1 <= val2, nil
+	default:
+		return false, errors.New("invalid operator")
+	}
+}
+
+func compareString(op string, value1, value2 string) (bool, error) {
+	switch op {
+	case "==":
+		return value1 == value2, nil
+	case "!=":
+		return value1 != value2, nil
+	case ">":
+		return value1 > value2, nil
+	case "<":
+		return value1 < value2, nil
+	case ">=":
+		return value1 >= value2, nil
+	case "<=":
+		return value1 <= value2, nil
+	default:
+		return false, errors.New("invalid operator")
+	}
 }

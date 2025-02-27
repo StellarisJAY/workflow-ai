@@ -68,6 +68,8 @@ func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
 		outputVars = node.Data.CrawlerNodeData.OutputVariables
 	case model.NodeTypeEnd:
 		outputVars = node.Data.EndNodeData.OutputVariables
+	case model.NodeTypeKnowledgeRetrieval:
+		outputVars = node.Data.RetrieveKnowledgeBaseNodeData.OutputVariables
 	}
 	idx := slices.IndexFunc(outputVars, func(variable *model.Variable) bool {
 		return variable.Name == varName
@@ -78,22 +80,26 @@ func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
 	return outputVars[idx]
 }
 
-func GetPassedEdges(definition *model.WorkflowDefinition, nodes []*model.NodeStatusDTO, branches []string) []string {
+func GetPassedEdges(definition *model.WorkflowDefinition, nodes []*model.NodeStatusDTO,
+	branches []*model.WorkflowInstanceSuccessBranchDTO) []string {
 	nodeMap := make(map[string]struct{})
 	for _, node := range nodes {
 		nodeMap[node.NodeId] = struct{}{}
 	}
 	branchMap := make(map[string]string)
+	// nodeId->branchHandle
 	for _, branch := range branches {
-		branchMap[branch] = branch
+		branchMap[branch.NodeId] = branch.Branch
 	}
 	var passedEdges []string
 	for _, edge := range definition.Edges {
+		// target和source节点是否存在
 		_, ok1 := nodeMap[edge.Target]
 		_, ok2 := nodeMap[edge.Source]
 		ok3 := true
 		if edge.SourceHandle != "" {
-			_, ok3 = branchMap[edge.SourceHandle]
+			// handle是否是成功的分支
+			ok3 = branchMap[edge.Source] == edge.SourceHandle
 		}
 		if ok1 && ok2 && ok3 {
 			passedEdges = append(passedEdges, edge.Id)

@@ -65,7 +65,7 @@ func (WorkflowInstance) TableName() string {
 type NodeInstance struct {
 	Id           int64              `json:"id" gorm:"primary_key;column:id;type:bigint"`
 	WorkflowId   int64              `json:"workflowId" gorm:"column:workflow_id;type:bigint;not null"`
-	Type         string             `json:"type" gorm:"column:type;type:varchar(16);not null"`
+	Type         string             `json:"type" gorm:"column:type;type:varchar(32);not null"`
 	NodeId       string             `json:"nodeId" gorm:"column:node_id;type:varchar(64);not null"`
 	AddTime      time.Time          `json:"addTime" gorm:"column:add_time;type:datetime;not null"`
 	CompleteTime time.Time          `json:"completeTime" gorm:"column:complete_time;type:datetime;not null"`
@@ -76,18 +76,6 @@ type NodeInstance struct {
 
 func (NodeInstance) TableName() string {
 	return "wf_node_instance"
-}
-
-type NodeInstanceOutputDTO struct {
-	Id           int64              `json:"id"`
-	NodeId       string             `json:"nodeId"`
-	NodeName     string             `json:"nodeName"`
-	Type         string             `json:"type"`
-	AddTime      time.Time          `json:"addTime"`
-	CompleteTime time.Time          `json:"completeTime"`
-	Status       NodeInstanceStatus `json:"status"`
-	Output       string             `json:"output"`
-	Error        string             `json:"error"`
 }
 
 type WorkflowInstanceListDTO struct {
@@ -103,19 +91,24 @@ type WorkflowInstanceListDTO struct {
 }
 
 type WorkflowInstanceDetailDTO struct {
-	Id                int64                  `json:"id,string"`
-	TemplateId        int64                  `json:"templateId,string"`
-	TemplateName      string                 `json:"templateName"`
-	Status            WorkflowInstanceStatus `json:"status"`
-	StatusName        string                 `json:"statusName"`
-	AddTime           time.Time              `json:"addTime"`
-	AddUser           int64                  `json:"addUser"`
-	CompleteTime      time.Time              `json:"completeTime"`
-	Duration          string                 `json:"duration"`
-	Data              string                 `json:"data"`
-	NodeStatusList    []*NodeStatusDTO       `json:"nodeStatusList" gorm:"-"`
-	PassedEdgesList   []string               `json:"passedEdgesList" gorm:"-"`
-	SuccessBranchList []string               `json:"successBranchList" gorm:"-"`
+	Id                int64                               `json:"id,string"`
+	TemplateId        int64                               `json:"templateId,string"`
+	TemplateName      string                              `json:"templateName"`
+	Status            WorkflowInstanceStatus              `json:"status"`
+	StatusName        string                              `json:"statusName"`
+	AddTime           time.Time                           `json:"addTime"`
+	AddUser           int64                               `json:"addUser"`
+	CompleteTime      time.Time                           `json:"completeTime"`
+	Duration          string                              `json:"duration"`
+	Data              string                              `json:"data"`
+	NodeStatusList    []*NodeStatusDTO                    `json:"nodeStatusList" gorm:"-"`
+	PassedEdgesList   []string                            `json:"passedEdgesList" gorm:"-"`
+	SuccessBranchList []*WorkflowInstanceSuccessBranchDTO `json:"successBranchList" gorm:"-"`
+}
+
+type WorkflowInstanceSuccessBranchDTO struct {
+	NodeId string `json:"nodeId"`
+	Branch string `json:"branch"`
 }
 
 type NodeStatusDTO struct {
@@ -136,4 +129,15 @@ type NodeInstanceDetailDTO struct {
 	Output       string             `json:"output"` // 节点输出变量json
 	Error        string             `json:"error"`  // 节点执行错误信息
 	StatusName   string             `json:"statusName"`
+}
+
+type WorkflowInstanceTimelineDTO struct {
+	Id           int64              `json:"id,string"`
+	NodeId       string             `json:"nodeId"`
+	NodeName     string             `json:"nodeName"`
+	Status       NodeInstanceStatus `json:"status"`
+	StatusName   string             `json:"statusName"`
+	AddTime      time.Time          `json:"addTime"`
+	CompleteTime time.Time          `json:"completeTime"`
+	Duration     string             `json:"duration"`
 }

@@ -40,33 +40,6 @@ func (w *WorkflowService) Start(ctx context.Context, request *model.StartWorkflo
 	return w.engine.Start(ctx, definition, request.TemplateId, 1, request.Inputs)
 }
 
-func (w *WorkflowService) Outputs(ctx context.Context, workflowId int64) ([]*model.NodeInstanceOutputDTO, error) {
-	data, err := w.instanceRepo.GetWorkflowDefinition(ctx, workflowId)
-	if err != nil {
-		return nil, err
-	}
-	if data == "" {
-		return nil, errors.New("workflow not found")
-	}
-	var def model.WorkflowDefinition
-	_ = json.Unmarshal([]byte(data), &def)
-	nodeOutputs, err := w.instanceRepo.GetNodeInstanceOutputs(ctx, workflowId)
-	if err != nil {
-		return nil, err
-	}
-	nodeMap := make(map[string]*model.Node)
-	for _, node := range def.Nodes {
-		nodeMap[node.Id] = node
-	}
-	for _, nodeOutput := range nodeOutputs {
-		if node, ok := nodeMap[nodeOutput.NodeId]; ok {
-			nodeOutput.NodeName = node.Data.Name
-			nodeOutput.Type = node.Type
-		}
-	}
-	return nodeOutputs, nil
-}
-
 func (w *WorkflowService) ListWorkflowInstance(ctx context.Context) ([]*model.WorkflowInstanceListDTO, int, error) {
 	instanceList, err := w.instanceRepo.ListWorkflowInstance(ctx)
 	if err != nil {
@@ -99,8 +72,8 @@ func (w *WorkflowService) GetWorkflowInstanceDetail(ctx context.Context, workflo
 	for _, nodeStatus := range nodeStatusList {
 		nodeStatus.StatusName = nodeStatus.Status.String()
 	}
-	for i, branch := range branches {
-		branches[i] = strings.Trim(branch, "\"")
+	for i := range branches {
+		branches[i].Branch = strings.Trim(branches[i].Branch, "\"")
 	}
 	instance.NodeStatusList = nodeStatusList
 	instance.PassedEdgesList = workflow.GetPassedEdges(&definition, nodeStatusList, branches)
@@ -127,4 +100,16 @@ func (w *WorkflowService) GetNodeInstance(ctx context.Context, workflowId int64,
 		Output:       instance.Output,
 		Error:        instance.Error,
 	}, nil
+}
+
+func (w *WorkflowService) GetWorkflowTimeline(ctx context.Context, workflowId int64) ([]*model.WorkflowInstanceTimelineDTO, error) {
+	timeline, err := w.instanceRepo.GetWorkflowTimeline(ctx, workflowId)
+	if err != nil {
+		return nil, err
+	}
+	for _, timeline := range timeline {
+		timeline.StatusName = timeline.Status.String()
+		timeline.Duration = timeline.CompleteTime.Sub(timeline.AddTime).String()
+	}
+	return timeline, nil
 }

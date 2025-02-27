@@ -40,6 +40,7 @@ if (props.isNewTemplate) {
       data: {
         name: "开始",
         defaultAllowVarTypes: ["string", "number"],
+        allowAddInputVar: true,
         startNodeData: {
           inputVariables: [
             {name: "input", type: "string", value: "", allowRef: false, isRef: false}

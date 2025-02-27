@@ -2,15 +2,13 @@
 import {useRoute, useRouter} from "vue-router";
 import {onMounted, ref} from "vue";
 import {
-  Table, Pagination, Dropdown, Menu, MenuItem, Popconfirm, message,
-  PageHeader, Button, Input, Drawer, Form, FormItem
+  PageHeader, Button, Drawer, Form, FormItem
 } from "ant-design-vue";
 import workflowAPI from '../../api/workflow.js';
 import {ReloadOutlined} from "@ant-design/icons-vue";
 import {useVueFlow, VueFlow} from "@vue-flow/core";
 import {Background} from "@vue-flow/background";
 import nodeConstants from './nodeConstants.js';
-import ExecutionLog from "../instance/executionLog.vue";
 import TimeUtil from "../../util/timeUtil.js";
 import NodeStatusTag from "./node/nodeStatusTag.vue";
 
@@ -18,15 +16,14 @@ const props = defineProps(['workflowId']);
 const router = useRouter();
 const route = useRoute();
 const workflowInstance = ref({});
-const nodeTypes = types.nodeTypes;
-const edgeTypes = types.edgeTypes;
+const nodeTypes = nodeConstants.nodeTypes;
+const edgeTypes = nodeConstants.edgeTypes;
 
 const nodes = ref([]);
 const edges = ref([]);
 
 const nodeDetailOpen = ref(false);
 const executeLogOpen = ref(false);
-const instanceOutputs = ref([]);
 
 const currentNode = ref({});
 const currentNodeInstance = ref({});
@@ -38,7 +35,6 @@ const queryInterval = ref(0);
 
 onMounted(_=>{
   getWorkflowDetail();
-  getInstanceOutputs();
 });
 onNodeClick(nodeClickHandler);
 
@@ -55,14 +51,16 @@ function getWorkflowDetail() {
     nodes.value.forEach(node=>{
       const n = nodeStatusList.find(ns=>ns.nodeId === node.id);
       if (n) {
-        node.status = {id: n.status, text: n.statusName};
+        node.status = {id: n.status, text: n['statusName']};
       }else {
         node.status = {id: 0, text: "未到达"};
       }
       // 标记条件节点通过的分支
       if (node['type'] === 'condition') {
         const conditionNodeData = node['data']['conditionNodeData'];
-        const branch = conditionNodeData.branches.find(b=>successBranches.includes(b.handle));
+        const branch = conditionNodeData.branches.find(b=>{
+          return successBranches.findIndex(s=>s.nodeId === node['id'] && s['branch']===b['handle']) !== -1;
+        });
         if (branch) {
           branch['success'] = true;
         }
@@ -83,14 +81,7 @@ function getWorkflowDetail() {
   });
 }
 
-function getInstanceOutputs() {
-  workflowAPI.getOutputs(props.workflowId).then(resp=>{
-    instanceOutputs.value = resp.data;
-  });
-}
-
 function openExecutionLog() {
-  getInstanceOutputs();
   executeLogOpen.value = true;
 }
 
@@ -128,7 +119,6 @@ function nodeClickHandler(event) {
   </div>
 
   <Drawer title="执行日志" :open="executeLogOpen" @close="_=>{executeLogOpen = false;}">
-    <execution-log :outputs="instanceOutputs"/>
   </Drawer>
 
   <Drawer title="节点详情" :open="nodeDetailOpen" @close="_=>{nodeDetailOpen = false;}">
