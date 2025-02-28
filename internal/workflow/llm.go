@@ -38,13 +38,24 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	var err error
 	switch model.ApiType(detail.ApiType) {
 	case model.ApiTypeOpenAI:
-		llm, err = openai.New(openai.WithModel(detail.Code),
+		options := []openai.Option{
+			openai.WithModel(detail.Code),
 			openai.WithBaseURL(detail.BaseUrl),
-			openai.WithToken(detail.ApiKey))
+			openai.WithToken(detail.ApiKey),
+		}
+		if llmNodeData.OutputFormat == "JSON" {
+			options = append(options, openai.WithResponseFormat(openai.ResponseFormatJSON))
+		}
+		llm, err = openai.New(options...)
 	case model.ApiTypeOllama:
-		llm, err = ollama.New(ollama.WithServerURL(detail.BaseUrl),
+		options := []ollama.Option{
 			ollama.WithModel(detail.Code),
-			ollama.WithFormat("json"))
+			ollama.WithServerURL(detail.BaseUrl),
+		}
+		if llmNodeData.OutputFormat == "JSON" {
+			options = append(options, ollama.WithFormat("json"))
+		}
+		llm, err = ollama.New(options...)
 	default:
 		panic(errors.New("不支持的大模型类型"))
 	}
