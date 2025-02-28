@@ -95,7 +95,6 @@ func (r *Router) Init() error {
 		{
 			wf.POST("/start", workflowHandler.Start)
 			wf.GET("/detail/:id", workflowHandler.GetDetail)
-			wf.GET("/outputs/:id", workflowHandler.Outputs)
 			wf.GET("/list", workflowHandler.List)
 			wf.GET("/node/detail", workflowHandler.GetNodeInstanceDetail)
 		}
