@@ -143,7 +143,7 @@ func (d *DocumentProcessor) embedDocument(ctx context.Context, kb *model.Knowled
 	if err != nil {
 		return nil, err
 	}
-	embedder, err := embeddings.NewEmbedder(embeddingModel, embeddings.WithBatchSize(20))
+	embedder, err := embeddings.NewEmbedder(embeddingModel, embeddings.WithBatchSize(10))
 	if err != nil {
 		return nil, err
 	}
