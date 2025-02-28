@@ -25,6 +25,7 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 			nodeInstance.Status = model.NodeInstanceStatusFailed
 			nodeInstance.CompleteTime = time.Now()
 			nodeInstance.Error = err.Error()
+			nodeInstance.Output = "{}"
 			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
 				log.Println("update node instance error:", err)
 			}
@@ -98,6 +99,6 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-		log.Println("update node instance error:", err)
+		panic(fmt.Errorf("llm output format error: %v", err))
 	}
 }
