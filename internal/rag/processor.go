@@ -101,7 +101,7 @@ func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId i
 		return nil, 0, err
 	}
 	defer vectorStore.Close()
-	return vectorStore.ListChunks(ctx, fileId, page, pageSize)
+	return vectorStore.ListChunks(ctx, fileId, true, page, pageSize)
 }
 
 // splitDocument 拆分文档

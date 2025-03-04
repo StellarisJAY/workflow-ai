@@ -63,7 +63,10 @@ func (r *RedisVectorStore) SimilaritySearch(ctx context.Context, query string, n
 	// PARAMS 4 vector ... distance_threshold 0.5
 	//
 	// 向量范围查询：@field:[VECTOR_RANGE radius $vector]=>{$YIELD_DISTANCE_AS: dist_field}
-	docs, err := r.store.SimilaritySearch(ctx, query, n, vectorstores.WithScoreThreshold(1-threshold))
+
+	// langchaingo v0.1.13 修改了redisvector的距离算法，不需要再手动取 1-threshold
+	// 参考PR：https://github.com/tmc/langchaingo/pull/1003
+	docs, err := r.store.SimilaritySearch(ctx, query, n, vectorstores.WithScoreThreshold(threshold))
 	if err != nil {
 		return nil, err
 	}
@@ -98,16 +101,18 @@ func (r *RedisVectorStore) FulltextSearch(ctx context.Context, query string, n i
 	return toKbSearchReturnDocuments(docs), nil
 }
 
-func (r *RedisVectorStore) ListChunks(ctx context.Context, fileId int64, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {
+func (r *RedisVectorStore) ListChunks(ctx context.Context, fileId int64, paged bool, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {
 	offset, num := int64((page-1)*pageSize), int64(pageSize)
-	cmd := r.cli.B().FtSearch().Index(indexName(r.kbId)).
+	c := r.cli.B().FtSearch().Index(indexName(r.kbId)).
 		Query(fmt.Sprintf(`@fileId:[%d]`, fileId)).
 		Sortby("order").
-		Asc().
-		Limit().
-		OffsetNum(offset, num).
-		Dialect(2).
-		Build()
+		Asc()
+	var cmd rueidis.Completed
+	if paged {
+		cmd = c.Limit().OffsetNum(offset, num).Dialect(2).Build()
+	} else {
+		cmd = c.Dialect(2).Build()
+	}
 	total, docs, err := r.cli.Do(ctx, cmd).AsFtSearch()
 	if err != nil {
 		return nil, 0, err
@@ -115,12 +120,40 @@ func (r *RedisVectorStore) ListChunks(ctx context.Context, fileId int64, page, p
 	return toKbSearchReturnDocuments(docs), int(total), nil
 }
 
+func (r *RedisVectorStore) getChunkKeys(ctx context.Context, fileId int64) ([]string, error) {
+	cmd := r.cli.B().FtSearch().Index(indexName(r.kbId)).
+		Query(fmt.Sprintf(`@fileId:[%d]`, fileId)).
+		Return("1").Identifier("id").
+		Limit().
+		OffsetNum(0, 10000). // TODO 优化获取所有分片key的方法
+		Dialect(2).
+		Build()
+	_, resp, err := r.cli.Do(ctx, cmd).AsFtSearch()
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(resp))
+	for i, doc := range resp {
+		ids[i] = doc.Key
+	}
+	return ids, nil
+}
+
+func (r *RedisVectorStore) Delete(ctx context.Context, fileId int64) error {
+	keys, err := r.getChunkKeys(ctx, fileId)
+	if err != nil {
+		return err
+	}
+	cmd := r.cli.B().Del().Key(keys...).Build()
+	return r.cli.Do(ctx, cmd).Error()
+}
+
 func toKbSearchReturnDocuments(docs []rueidis.FtSearchDoc) []*model.KbSearchReturnDocument {
 	res := make([]*model.KbSearchReturnDocument, len(docs))
 	for i, doc := range docs {
 		res[i] = &model.KbSearchReturnDocument{
 			Content: doc.Doc["content"],
-			Score:   float32(1.0 - doc.Score),
+			Score:   float32(1 - doc.Score),
 			ChunkId: doc.Doc["id"],
 			FileId:  doc.Doc["fileId"],
 		}

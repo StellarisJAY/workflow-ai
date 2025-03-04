@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/rag"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
+	"github.com/StellrisJAY/workflow-ai/internal/repo/vector"
 	"github.com/bwmarrin/snowflake"
 	"io"
 	"log"
@@ -21,11 +23,12 @@ type KnowledgeBaseService struct {
 	tm        *repo.TransactionManager
 	fs        fs.FileStore
 	processor *rag.DocumentProcessor
+	vf        vector.Factory
 }
 
 func NewKnowledgeBaseService(kbRepo *repo.KnowledgeBaseRepo, snowflake *snowflake.Node,
-	tm *repo.TransactionManager, fs fs.FileStore, processor *rag.DocumentProcessor) *KnowledgeBaseService {
-	return &KnowledgeBaseService{kbRepo: kbRepo, snowflake: snowflake, tm: tm, fs: fs, processor: processor}
+	tm *repo.TransactionManager, fs fs.FileStore, processor *rag.DocumentProcessor, vf vector.Factory) *KnowledgeBaseService {
+	return &KnowledgeBaseService{kbRepo: kbRepo, snowflake: snowflake, tm: tm, fs: fs, processor: processor, vf: vf}
 }
 
 func (k *KnowledgeBaseService) Create(ctx context.Context, kb *model.KnowledgeBase) error {
@@ -144,6 +147,13 @@ func (k *KnowledgeBaseService) Delete(ctx context.Context, fileId int64) error {
 		if err := k.fs.Delete(ctx, file.Url); err != nil {
 			return err
 		}
+		vs, err := k.vf.MakeVectorStore(ctx, file.KbId, nil)
+		if err != nil {
+			return err
+		}
+		if err := vs.Delete(ctx, fileId); err != nil {
+			log.Println(err)
+		}
 		return nil
 	})
 }
@@ -178,22 +188,42 @@ func (k *KnowledgeBaseService) UpdateFileProcessOptions(ctx context.Context, dto
 }
 
 func (k *KnowledgeBaseService) ProcessFile(ctx context.Context, fileId int64) error {
-	file, err := k.kbRepo.GetFileDetail(ctx, fileId)
+	taskId := make(chan int64, 1)
+	defer close(taskId)
+	err := k.tm.Tx(ctx, func(ctx context.Context) error {
+		file, err := k.kbRepo.GetFileDetail(ctx, fileId)
+		if err != nil {
+			return err
+		}
+		if file.Status == model.KbFileProcessed {
+			return nil
+		}
+		task, err := k.kbRepo.GetFileProcessTaskByFileId(ctx, fileId)
+		if err != nil {
+			return err
+		}
+		if task != nil && task.Status != model.KbFileProcessStatusFailed &&
+			task.Status != model.KbFileProcessStatusCompleted {
+			return errors.New("previous process task not completed")
+		}
+		task = &model.KbFileProcessTask{
+			Id:           k.snowflake.Generate().Int64(),
+			KbId:         file.KbId,
+			FileId:       fileId,
+			Status:       model.KbFileProcessStatusQueued,
+			AddTime:      time.Now(),
+			CompleteTime: time.Now(),
+		}
+		if err := k.kbRepo.InsertFileProcessTask(ctx, task); err != nil {
+			return err
+		}
+		taskId <- task.Id
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-	task := model.KbFileProcessTask{
-		Id:           k.snowflake.Generate().Int64(),
-		KbId:         file.KbId,
-		FileId:       fileId,
-		Status:       model.KbFileProcessStatusQueued,
-		AddTime:      time.Now(),
-		CompleteTime: time.Now(),
-	}
-	if err := k.kbRepo.InsertFileProcessTask(ctx, &task); err != nil {
-		return err
-	}
-	k.processor.SubmitTask(task.Id)
+	k.processor.SubmitTask(<-taskId)
 	return nil
 }
 

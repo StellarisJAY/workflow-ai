@@ -32,6 +32,7 @@ type Store interface {
 	AddDocuments(ctx context.Context, docs []schema.Document) ([]string, error)
 	// FulltextSearch 全文搜索
 	FulltextSearch(ctx context.Context, query string, n int) ([]*model.KbSearchReturnDocument, error)
-	ListChunks(ctx context.Context, fileId int64, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error)
+	ListChunks(ctx context.Context, fileId int64, paged bool, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error)
+	Delete(ctx context.Context, fileId int64) error
 	Close()
 }

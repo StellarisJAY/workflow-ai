@@ -159,10 +159,12 @@ function startDocumentProcessing(id) {
     <Table :columns="columns" :data-source="kbDocumentList" :pagination="false">
       <template #bodyCell="{ column, _, record }">
         <template v-if="column.dataIndex === 'operation'">
-          <a @click="startDocumentProcessing(record['id'])">解析</a>
-          /
-          <a @click="openProcessOptionsDrawer(record['id'])">设置</a>
-          /
+          <div v-if="record['status'] === 1">
+            <a @click="startDocumentProcessing(record['id'])">解析</a>
+            /
+            <a @click="openProcessOptionsDrawer(record['id'])">设置</a>
+            /
+          </div>
           <a @click="_=>{knowledgeBaseAPI.downloadFile(record['id'])}">下载</a>
           /
           <a @click="deleteDocument(record['id'])">删除</a>
@@ -175,6 +177,7 @@ function startDocumentProcessing(id) {
           <Tag v-else-if="record['status'] === 1" color="yellow">{{record['statusName']}}</Tag>
           <Tag v-else-if="record['status'] === 2" color="green">{{record['statusName']}}</Tag>
           <Tag v-else-if="record['status'] === 3" color="red">{{record['statusName']}}</Tag>
+          <Tag v-else-if="record['status'] === 4" color="red">{{record['statusName']}}</Tag>
         </template>
       </template>
     </Table>

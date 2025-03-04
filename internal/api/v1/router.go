@@ -54,7 +54,7 @@ func (r *Router) Init() error {
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
 	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
-	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store, documentProcessor)
+	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store, documentProcessor, vectorstoreFactory)
 
 	llmHandler := NewLLMHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)

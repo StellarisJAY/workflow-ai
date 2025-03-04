@@ -158,6 +158,17 @@ func (k *KnowledgeBaseRepo) UpdateFileStatus(ctx context.Context, fileId int64, 
 		}).Error
 }
 
+func (k *KnowledgeBaseRepo) GetFileProcessTaskByFileId(ctx context.Context, fileId int64) (*model.KbFileProcessTask, error) {
+	var task *model.KbFileProcessTask
+	if err := k.DB(ctx).Table(model.KbFileProcessTask{}.TableName()).
+		WithContext(ctx).
+		Where("file_id =?", fileId).
+		Scan(&task).Error; err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
 func (k *KnowledgeBaseRepo) GetFilesInIdList(ctx context.Context, fileIds []int64) ([]*model.KbFileListDTO, error) {
 	var result []*model.KbFileListDTO
 	err := k.DB(ctx).Table(model.KnowledgeBaseFile{}.TableName()).Select("id,name,length").Where("id IN (?)", fileIds).Find(&result).Error
