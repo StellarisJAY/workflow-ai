@@ -16,10 +16,12 @@ const (
 type VariableType string
 
 const (
-	VariableTypeNumber      VariableType = "number"    // 数值类型
-	VariableTypeString      VariableType = "string"    // 字符串类型
-	VariableTypeStringArray VariableType = "array_str" // 字符串数组类型
-	VariableTypeNumberArray VariableType = "array_num" // 数值数组类型
+	VariableTypeNumber      VariableType = "number"     // 数值类型
+	VariableTypeString      VariableType = "string"     // 字符串类型
+	VariableTypeStringArray VariableType = "array_str"  // 字符串数组类型
+	VariableTypeNumberArray VariableType = "array_num"  // 数值数组类型
+	VariableTypeTextFile    VariableType = "text_file"  // 文本文件类型
+	VariableTypeImageFile   VariableType = "image_file" // 图片文件类型
 )
 
 type KbSearchType string
@@ -56,7 +58,7 @@ type NodeData struct {
 
 // LLMNodeData LLM节点数据
 type LLMNodeData struct {
-	ModelName       string      `json:"model"`           // 模型名称
+	ModelName       string      `json:"modelName"`       // 模型名称
 	ModelId         int64       `json:"modelId,string"`  // 模型ID
 	Prompt          string      `json:"prompt"`          // 提示词
 	InputVariables  []*Variable `json:"inputVariables"`  // 输入变量列表, key:变量名，value：变量来源{{nodeId.xxx}}或空(运行时输入)
@@ -68,8 +70,9 @@ type LLMNodeData struct {
 
 // KnowledgeBaseWriteNodeData 写入知识库节点数据
 type KnowledgeBaseWriteNodeData struct {
-	KnowledgeBaseId int64  `json:"knowledgeBaseId"` // 知识库ID
-	Content         string `json:"content"`         // 写入内容, {{nodeId.xxx}}表示写入某节点的变量列表的内容, 空表示运行时输入
+	KbId       int64    `json:"kbId,string"` // 知识库ID
+	ChunkSize  int      `json:"chunkSize"`   // 分片大小
+	Separators []string `json:"separators"`  // 分隔符
 }
 
 // RetrieveKnowledgeBaseNodeData 检索知识库节点数据
@@ -90,7 +93,7 @@ type StartNodeData struct {
 type Variable struct {
 	Type         VariableType   `json:"type"`         // 变量类型
 	Name         string         `json:"name"`         // 变量名
-	Value        string         `json:"value"`        // 变量值
+	Value        string         `json:"value"`        // 变量值, 文件类型的value为文件id
 	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
 	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
 	AllowRef     bool           `json:"allowRef"`     // 是否允许引用
@@ -172,6 +175,8 @@ var LLMNodePrototype = &Node{
 			OutputVariables: []*Variable{},
 			Temperature:     0.5,
 			TopP:            0.5,
+			ModelName:       "",
+			ModelId:         0,
 		},
 	},
 }

@@ -1,6 +1,6 @@
 <script setup>
 import {
-  Card, Layout, LayoutContent, LayoutSider, Menu, MenuItem,
+  Card, Layout, LayoutContent, LayoutSider, Menu, MenuItem
 } from "ant-design-vue";
 import {onMounted, ref} from "vue";
 import llmAPI from '../../api/llm.js';

@@ -1,26 +1,50 @@
 <script setup>
 import {
-  Form, FormItem, Button,
-  Textarea, Card, Row, Col, Slider, InputNumber, message, Divider,
-  Collapse, CollapsePanel, Select
+  Textarea, Divider, Pagination
 } from "ant-design-vue";
-import {ref} from "vue";
+import {onMounted, ref} from "vue";
 import knowledgeBaseAPI from "../../api/knowledgeBase.js";
 import {useRoute} from "vue-router";
-import {kbSearchTypes} from "../../api/const.js";
+
+const props = defineProps(["fileId"]);
 
 const route = useRoute()
 const kbId = route.params["id"];
-const searchResult = ref([]);
+const chunks = ref([]);
+
+const query = ref({
+  page: 1,
+  pageSize: 10,
+  kbId: kbId,
+  fileId: props.fileId,
+});
+const total = ref(0);
+
+onMounted(()=>{
+  listChunks();
+});
+
+function listChunks() {
+  knowledgeBaseAPI.listChunks(query.value).then((resp)=>{
+    chunks.value = resp.data;
+    total.value = resp.total;
+  });
+}
 </script>
 
 <template>
-  <Card style="max-height:80vh;height:80vh;overflow: auto">
+  <div style="height: 90%; overflow: auto;">
     <div v-for="item in chunks">
       <Textarea v-model:value="item['content']" style="height: 300px"/>
       <Divider/>
     </div>
-  </Card>
+  </div>
+
+  <Pagination v-model:current="query.page"
+              :page-size="query.pageSize"
+              :total="total"
+              @change="listChunks"
+              :show-size-changer="false"/>
 </template>
 
 <style scoped>

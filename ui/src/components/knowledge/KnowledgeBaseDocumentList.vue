@@ -11,12 +11,14 @@ import {
   Table,
   Tag,
   UploadDragger,
-    InputNumber
+    InputNumber,
+    Pagination
 } from "ant-design-vue";
 import {useRoute} from "vue-router";
 import {onMounted, ref} from "vue";
 import knowledgeBaseAPI from "../../api/knowledgeBase.js";
 import TimeUtil from "../../util/timeUtil.js";
+import KnowledgeBaseDocumentDetail from "./KnowledgeBaseDocumentDetail.vue";
 
 const route = useRoute();
 const kbId = route.params['id'];
@@ -45,6 +47,8 @@ const documentListLoading = ref(false);
 const processOptionDrawerOpen = ref(false);
 const processOptions = ref({});
 
+const documentChunksDrawerOpen = ref(false);
+const currentDocumentId = ref(null);
 
 onMounted(()=>{
   listDocuments();
@@ -57,7 +61,7 @@ function listDocuments() {
     }else {
       kbDocumentList.value = [];
     }
-    total.value = resp.data.length;
+    total.value = resp.total;
   });
 }
 
@@ -145,7 +149,13 @@ function unescapeString(str) {
 function startDocumentProcessing(id) {
   knowledgeBaseAPI.startFileProcessing(id).then((resp) => {
     message.success("开始解析");
+    listDocuments();
   });
+}
+
+function openDocumentChunksDrawer(id) {
+  currentDocumentId.value = id;
+  documentChunksDrawerOpen.value = true;
 }
 </script>
 
@@ -155,9 +165,12 @@ function startDocumentProcessing(id) {
       <Button type="primary" @click="openUploadDrawer">上传</Button>
     </template>
   </PageHeader>
-  <Spin :spinning="documentListLoading">
+  <Spin :spinning="documentListLoading" >
     <Table :columns="columns" :data-source="kbDocumentList" :pagination="false">
       <template #bodyCell="{ column, _, record }">
+        <template v-if="column.dataIndex === 'name'">
+          <a @click="openDocumentChunksDrawer(record['id'])">{{record['name']}}</a>
+        </template>
         <template v-if="column.dataIndex === 'operation'">
           <div v-if="record['status'] === 1">
             <a @click="startDocumentProcessing(record['id'])">解析</a>
@@ -167,7 +180,7 @@ function startDocumentProcessing(id) {
           </div>
           <a @click="_=>{knowledgeBaseAPI.downloadFile(record['id'])}">下载</a>
           /
-          <a @click="deleteDocument(record['id'])">删除</a>
+          <a v-if="record['status'] !== 2" @click="deleteDocument(record['id'])">删除</a>
         </template>
         <template v-if="column.dataIndex === 'addTime'">
           {{TimeUtil.formatDateTime(record['addTime'])}}
@@ -182,6 +195,10 @@ function startDocumentProcessing(id) {
       </template>
     </Table>
   </Spin>
+  <Pagination v-model:current="query.page" :page-size="query.pageSize"
+              :total="total"
+              :show-size-changer="false"
+              @change="listDocuments"/>
   <Drawer :open="uploadDrawerOpen" title="上传文档" @close="_=>{uploadDrawerOpen=false}">
     <Spin about="上传中" :spinning="uploading">
       <UploadDragger :multiple="false" v-model:file-list="uploadFileList" name="file"/>
@@ -198,6 +215,11 @@ function startDocumentProcessing(id) {
       </FormItem>
     </Form>
     <Button type="primary" @click="updateProcessOptions">修改</Button>
+  </Drawer>
+  <Drawer size="large" :open="documentChunksDrawerOpen"
+          @close="_=>{documentChunksDrawerOpen = false;}"
+          :destroy-on-close="true" title="文档切片">
+    <KnowledgeBaseDocumentDetail :file-id="currentDocumentId"/>
   </Drawer>
 </template>
 

@@ -22,7 +22,7 @@ onMounted(()=>{
 });
 
 function onModelChange(modelId) {
-  const llm = props.llmList.find(llm=>llm.id === modelId);
+  const llm = llmList.value.find(llm=>llm['id'] === modelId);
   if (llm) {
     props.node.data['llmNodeData']['modelName'] = llm.name;
   }

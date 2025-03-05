@@ -47,5 +47,8 @@ export default {
             document.body.removeChild(downloadElement); //下载完成移除元素
             window.URL.revokeObjectURL(href); //释放掉blob对象
         });
+    },
+    listChunks: function(query) {
+        return api.get("/knowledgeBase/chunks",query);
     }
 }
