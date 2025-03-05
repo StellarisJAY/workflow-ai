@@ -8,6 +8,7 @@ import knowledgeWriteNode from "./node/knowledgeWriteNode.vue";
 import CustomEdge from "./customEdge.vue";
 import CrawlerNode from "./node/crawlerNode.vue";
 import templateAPI from "../../api/template.js";
+import {randomUUID} from "../../util/uuid.js";
 
 const nodeTypes = ref({
     llm: markRaw(LLMNode),
@@ -38,7 +39,7 @@ const llmOutputFormatOptions = [
 
 function createBranch() {
     return {
-        handle: crypto.randomUUID(),
+        handle: randomUUID(),
         connector: "and",
         conditions: [
             {
