@@ -1,8 +1,8 @@
 <script setup>
 import {useRoute, useRouter} from "vue-router";
-import {onMounted, ref} from "vue";
+import {onMounted, onUnmounted, ref} from "vue";
 import {
-  PageHeader, Button, Drawer, Form, FormItem
+  PageHeader, Button, Drawer, Form, FormItem, Collapse, CollapsePanel
 } from "ant-design-vue";
 import workflowAPI from '../../api/workflow.js';
 import {ReloadOutlined} from "@ant-design/icons-vue";
@@ -28,6 +28,7 @@ const executeLogOpen = ref(false);
 const currentNode = ref({});
 const currentNodeInstance = ref({});
 const currentNodeOutput = ref({});
+const currentNodeOutputVarTypes = ref({});
 
 const {onNodeClick} = useVueFlow();
 
@@ -35,6 +36,12 @@ const queryInterval = ref(0);
 
 onMounted(_=>{
   getWorkflowDetail();
+});
+onUnmounted(_=>{
+  if (queryInterval.value !== 0) {
+    clearInterval(queryInterval.value);
+    queryInterval.value = 0;
+  }
 });
 onNodeClick(nodeClickHandler);
 
@@ -77,6 +84,7 @@ function getWorkflowDetail() {
       queryInterval.value = setInterval(_=>getWorkflowDetail(), 3000);
     } else if (queryInterval.value !== 0 && workflowInstance.value.status !== 0) {
       clearInterval(queryInterval.value);
+      queryInterval.value = 0;
     }
   });
 }
@@ -95,6 +103,7 @@ function nodeClickHandler(event) {
     } else {
       currentNodeOutput.value = "";
     }
+    currentNodeOutputVarTypes.value = currentNodeInstance.value['outputVariableTypes'];
     nodeDetailOpen.value = true;
   });
 }
@@ -121,7 +130,7 @@ function nodeClickHandler(event) {
   <Drawer title="执行日志" :open="executeLogOpen" @close="_=>{executeLogOpen = false;}">
   </Drawer>
 
-  <Drawer title="节点详情" :open="nodeDetailOpen" @close="_=>{nodeDetailOpen = false;}">
+  <Drawer size="large" title="节点详情" :open="nodeDetailOpen" @close="_=>{nodeDetailOpen = false;}">
     <Form>
       <FormItem label="状态">
         <node-status-tag :status="{id: currentNodeInstance.status, text: currentNodeInstance.statusName}"/>
@@ -134,11 +143,16 @@ function nodeClickHandler(event) {
       </FormItem>
     </Form>
     <h4 v-if="currentNodeOutput">输出变量</h4>
-    <Form>
-      <FormItem v-for="(value, key) in currentNodeOutput" :label="key">
-        {{value}}
-      </FormItem>
-    </Form>
+    <Collapse>
+      <CollapsePanel v-for="(value, key) in currentNodeOutput" :key="key" :header="key">
+        <p v-if="currentNodeOutputVarTypes[key]==='string' || currentNodeOutputVarTypes[key]==='number'">{{value}}</p>
+        <Collapse v-if="currentNodeOutputVarTypes[key]==='array_str' || currentNodeOutputVarTypes[key]==='array_num'">
+          <CollapsePanel v-for="(item, i) in value" :header="i">
+            <p>{{item}}</p>
+          </CollapsePanel>
+        </Collapse>
+      </CollapsePanel>
+    </Collapse>
     <h4 v-if="currentNodeInstance['error']">错误信息</h4>
     <p v-if="currentNodeInstance['error']">{{currentNodeInstance['error']}}</p>
   </Drawer>

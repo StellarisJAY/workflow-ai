@@ -14,3 +14,4 @@ vectorStoreType: redis
 redis:
   host: 172.17.0.1
   port: 16379
+bochaAPIKey: abcd

@@ -14,6 +14,7 @@ import ConditionSetting from "./setting/ConditionSetting.vue";
 import {randomUUID} from "../../util/uuid.js";
 import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
 import NodeConstants from "./nodeConstants.js";
+import WebSearchSetting from "./setting/WebSearchSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -57,7 +58,6 @@ if (props.isNewTemplate) {
         name: "结束",
         endNodeData: {
           outputVariables: [
-            {name: "output", type: "string", value: ""}
           ]
         },
       }
@@ -83,6 +83,7 @@ const startDrawerOpen = ref(false);
 const endDrawerOpen = ref(false);
 const crawlerDrawerOpen = ref(false);
 const conditionDrawerOpen = ref(false);
+const webSearchDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
 
@@ -98,6 +99,7 @@ onNodeClick(event => {
     case "end": endDrawerOpen.value = true; break;
     case "crawler": crawlerDrawerOpen.value = true; break;
     case "condition": conditionDrawerOpen.value = true; break;
+    case "webSearch": webSearchDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
@@ -280,6 +282,12 @@ function updateTemplate() {
           @close="_=>{conditionDrawerOpen = false;}"
           :destroy-on-close="true">
     <ConditionSetting :node="currentSettingNodes['condition']"/>
+  </Drawer>
+  <Drawer title="搜索设置" size="large"
+          :open="webSearchDrawerOpen"
+          @close="_=>{webSearchDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <WebSearchSetting :node="currentSettingNodes['webSearch']"/>
   </Drawer>
 </template>
 

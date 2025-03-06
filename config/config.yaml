@@ -14,3 +14,4 @@ vectorStoreType: redis
 redis:
   host: localhost
   port: 16379
+bochaAPIKey: abcd

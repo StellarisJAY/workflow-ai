@@ -119,16 +119,17 @@ type NodeStatusDTO struct {
 }
 
 type NodeInstanceDetailDTO struct {
-	Id           int64              `json:"id"`
-	WorkflowId   int64              `json:"workflowId"`
-	Type         string             `json:"type"`
-	NodeId       string             `json:"nodeId"`
-	AddTime      time.Time          `json:"addTime"`
-	CompleteTime time.Time          `json:"completeTime"`
-	Status       NodeInstanceStatus `json:"status"`
-	Output       string             `json:"output"` // 节点输出变量json
-	Error        string             `json:"error"`  // 节点执行错误信息
-	StatusName   string             `json:"statusName"`
+	Id                  int64                   `json:"id"`
+	WorkflowId          int64                   `json:"workflowId"`
+	Type                string                  `json:"type"`
+	NodeId              string                  `json:"nodeId"`
+	AddTime             time.Time               `json:"addTime"`
+	CompleteTime        time.Time               `json:"completeTime"`
+	Status              NodeInstanceStatus      `json:"status"`
+	Output              string                  `json:"output"` // 节点输出变量json
+	Error               string                  `json:"error"`  // 节点执行错误信息
+	StatusName          string                  `json:"statusName"`
+	OutputVariableTypes map[string]VariableType `json:"outputVariableTypes" gorm:"-"`
 }
 
 type WorkflowInstanceTimelineDTO struct {
@@ -140,4 +141,9 @@ type WorkflowInstanceTimelineDTO struct {
 	AddTime      time.Time          `json:"addTime"`
 	CompleteTime time.Time          `json:"completeTime"`
 	Duration     string             `json:"duration"`
+}
+
+type NodeInstanceOutputVariable struct {
+	Type  VariableType `json:"type"`
+	Value any          `json:"value"`
 }

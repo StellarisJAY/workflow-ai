@@ -113,3 +113,17 @@ func parseHTMLContent(response *http.Response) (string, error) {
 	content := strings.Join(pContents, "\n")
 	return content, nil
 }
+
+func httpRequest(urlStr string, method string) (*http.Response, error) {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+	// http请求
+	request, err := http.NewRequest(method, u.String(), nil)
+	if err != nil {
+		panic(err)
+	}
+	response, err := http.DefaultClient.Do(request)
+	return response, err
+}

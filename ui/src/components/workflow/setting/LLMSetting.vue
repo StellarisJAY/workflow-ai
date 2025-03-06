@@ -11,7 +11,7 @@ const llmList = ref([]);
 const llmOptions = ref([]);
 
 onMounted(()=>{
-  llmAPI.listModels({paged: false}).then(resp=>{
+  llmAPI.listModels({paged: false, modelType: "chat"}).then(resp=>{
     llmList.value = resp.data;
     const options = [];
     llmList.value.forEach(item=>{

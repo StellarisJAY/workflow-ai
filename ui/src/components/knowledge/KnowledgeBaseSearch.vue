@@ -78,7 +78,9 @@ function downloadFile(id) {
         </Collapse>
         <div v-for="item in searchResult['documents']">
           <p style="color:gray">相似度得分:{{item['score']}}</p>
-          <Textarea v-model:value="item['content']" style="height: 300px"/>
+          <div style="height: 300px; width: 100%; overflow:auto">
+            <p>{{item['content']}}</p>
+          </div>
           <Divider/>
         </div>
       </Card>

@@ -47,15 +47,16 @@ function getPrevNodesOutputs(currNodeId) {
             case "end": outputVariables = node.data['endNodeData'].outputVariables; break;
             case "crawler": outputVariables = node.data['crawlerNodeData'].outputVariables; break;
             case "knowledgeRetrieval": outputVariables = node.data['retrieveKnowledgeBaseNodeData'].outputVariables; break;
+            case "webSearch": outputVariables = node.data['webSearchNodeData'].outputVariables; break;
         }
         if (outputVariables) {
             let option = {
                 label: node.data['name'],
                 value: node.id,
-                children: []
+                children: [],
             };
             outputVariables.forEach(variable=>{
-                option.children.push({label: variable.name, value: variable.name});
+                option.children.push({label: variable.name, value: variable.name, type: variable.type});
             });
             options.push(option);
         }

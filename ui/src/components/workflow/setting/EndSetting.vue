@@ -18,14 +18,22 @@ onMounted(()=>{
 
 function onRefOptionChange(variable, ev) {
   variable.ref = ev[0] + "." + ev[1];
+  variable.isRef = true;
+  const node = refOptions.value.find(option=>option["value"] === ev[0]);
+  if (node) {
+    const child = node["children"].find(child=>child["label"] === ev[1]);
+    if (child) {
+      variable.type = child["type"];
+    }
+  }
 }
 
 function addVariable(target) {
-  target.push({name: "variable", value: "", isRef: true, ref: ""});
+  target.push({name: "variable", value: "", isRef: true, ref: "", type: "string"});
 }
 
 function removeVariable(target, name) {
-  const idx = target.findIndex(item=>item.name !== name);
+  const idx = target.findIndex(item=>item.name === name);
   target.splice(idx, 1);
 }
 </script>

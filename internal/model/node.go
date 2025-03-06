@@ -11,6 +11,7 @@ const (
 	NodeTypeCrawler            NodeType = "crawler"            // 爬虫节点
 	NodeTypeCondition          NodeType = "condition"          // 条件判断节点
 	NodeTypeKeywordExtraction  NodeType = "keywordExtraction"  // 关键词提取节点
+	NodeTypeWebSearch          NodeType = "webSearch"          // 搜索引擎节点
 )
 
 type VariableType string
@@ -54,6 +55,7 @@ type NodeData struct {
 	EndNodeData                   *EndNodeData                   `json:"endNodeData"`                   // 结束节点数据
 	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`               // 爬虫节点数据
 	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`             // 条件判断节点数据
+	WebSearchNodeData             *WebSearchNodeData             `json:"webSearchNodeData"`             // 搜索引擎节点数据
 }
 
 // LLMNodeData LLM节点数据
@@ -129,6 +131,14 @@ type ConditionNodeData struct {
 
 type ConditionNodeOutput struct {
 	SuccessBranch string `json:"successBranch"`
+}
+
+type WebSearchType string
+
+type WebSearchNodeData struct {
+	TopN            int         `json:"topN"` // 返回结果数量
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
 }
 
 // ConditionNodePrototype 条件判断节点原型
@@ -240,6 +250,27 @@ var KeywordExtractionNodePrototype = &Node{
 			OutputVariables: []*Variable{
 				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 关键词数量
 				{Name: "keywords", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 关键词列表
+			},
+		},
+	},
+}
+
+var WebSearchNodePrototype = &Node{
+	Type: string(NodeTypeWebSearch),
+	Data: NodeData{
+		Name:                 "网页搜索",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
+		WebSearchNodeData: &WebSearchNodeData{
+			TopN: 10,
+			InputVariables: []*Variable{
+				{Name: "query", Type: VariableTypeString, Required: true, Fixed: true, AllowRef: true},
+			},
+			OutputVariables: []*Variable{
+				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 搜索到的网页总数
+				{Name: "urls", Type: VariableTypeStringArray, Required: true, Fixed: true},     // 搜索到的网页url列表
+				{Name: "contents", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 搜索到网页内容列表
 			},
 		},
 	},

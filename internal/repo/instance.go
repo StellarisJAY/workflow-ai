@@ -50,6 +50,20 @@ func (i *InstanceRepo) GetWorkflowInstance(ctx context.Context, id int64) (*mode
 	return workflowInstance, err
 }
 
+func (i *InstanceRepo) GetWorkflowInstanceStatus(ctx context.Context, id int64) (model.WorkflowInstanceStatus, error) {
+	var workflowInstance model.WorkflowInstanceStatus
+	err := i.DB(ctx).Table(model.WorkflowInstance{}.TableName()).
+		Select("status").
+		WithContext(ctx).
+		Where("id =?", id).
+		Scan(&workflowInstance).
+		Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return -1, nil
+	}
+	return workflowInstance, err
+}
+
 func (i *InstanceRepo) GetNodeInstanceByNodeId(ctx context.Context, workflowId int64, nodeId string) (*model.NodeInstance, error) {
 	var nodeInstance *model.NodeInstance
 	err := i.DB(ctx).Table(model.NodeInstance{}.TableName()).

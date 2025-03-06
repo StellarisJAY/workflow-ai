@@ -49,7 +49,7 @@ func (r *Router) Init() error {
 	tm := repo.NewTransactionManager(repository)
 	vectorstoreFactory := vector.MakeFactory(*r.conf)
 	documentProcessor := rag.NewDocumentProcessor(8, kbRepo, store, llmRepo, vectorstoreFactory)
-	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor)
+	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor, r.conf)
 
 	llmService := service.NewLLMService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)

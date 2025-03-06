@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/StellrisJAY/workflow-ai/internal/config"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/rag"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
@@ -22,10 +23,11 @@ type Engine struct {
 	llmRepo      *repo.LLMRepo
 	kbRepo       *repo.KnowledgeBaseRepo
 	rag          *rag.DocumentProcessor
+	conf         *config.Config
 }
 
 func NewEngine(instanceRepo *repo.InstanceRepo, llmRepo *repo.LLMRepo, snowflake *snowflake.Node,
-	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor) *Engine {
+	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor, conf *config.Config) *Engine {
 	return &Engine{
 		instanceRepo: instanceRepo,
 		tm:           tm,
@@ -33,6 +35,7 @@ func NewEngine(instanceRepo *repo.InstanceRepo, llmRepo *repo.LLMRepo, snowflake
 		llmRepo:      llmRepo,
 		kbRepo:       kbRepo,
 		rag:          rag,
+		conf:         conf,
 	}
 }
 
@@ -199,7 +202,23 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 			}
 		}()
-
+	case string(model.NodeTypeWebSearch):
+		webSearchNodeData := node.Data.WebSearchNodeData
+		if webSearchNodeData == nil {
+			return fmt.Errorf("invalid webSearch Node Data")
+		}
+		inputMap, err := e.LookupInputVariables(ctx, webSearchNodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			return err
+		}
+		go func() {
+			e.executeWebSearchNode(context.TODO(), node, nodeInstance, webSearchNodeData, inputMap)
+			if nodeInstance.Status != model.NodeInstanceStatusFailed {
+				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
+			} else {
+				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
+			}
+		}()
 	}
 	return nil
 }
@@ -228,6 +247,12 @@ func (e *Engine) stepWorkflow(ctx context.Context, currNode *model.Node, workflo
 
 func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, definition *model.WorkflowDefinition,
 	workflowId int64) {
+	if status, err := e.instanceRepo.GetWorkflowInstanceStatus(ctx, workflowId); err != nil {
+		log.Println("get workflow instance status error:", err)
+		return
+	} else if status == model.WorkflowInstanceStatusCompleted || status == model.WorkflowInstanceStatusFailed {
+		return
+	}
 	for _, next := range nextNodes {
 		nodes := GetPrevNodes(definition, next)
 		ids := make([]string, len(nodes))

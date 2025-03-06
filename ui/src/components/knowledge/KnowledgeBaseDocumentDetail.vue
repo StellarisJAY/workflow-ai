@@ -35,7 +35,9 @@ function listChunks() {
 <template>
   <div style="height: 90%; overflow: auto;">
     <div v-for="item in chunks">
-      <Textarea v-model:value="item['content']" style="height: 300px"/>
+      <div style="height: 300px; width: 100%; overflow:auto">
+        <p>{{item['content']}}</p>
+      </div>
       <Divider/>
     </div>
   </div>

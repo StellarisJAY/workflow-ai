@@ -89,16 +89,34 @@ func (w *WorkflowService) GetNodeInstance(ctx context.Context, workflowId int64,
 	if instance == nil {
 		return nil, errors.New("node instance not found")
 	}
+	data, err := w.instanceRepo.GetWorkflowDefinition(ctx, workflowId)
+	if err != nil {
+		return nil, errors.New("workflow definition not found")
+	}
+	var definition model.WorkflowDefinition
+	if err := json.Unmarshal([]byte(data), &definition); err != nil {
+		return nil, errors.New("invalid workflow definition")
+	}
+	// 获取输出变量类型
+	node := workflow.FindNodeById(&definition, nodeId)
+	outputVarTypes := make(map[string]model.VariableType)
+	if node != nil {
+		outputVars := workflow.GetNodeOutputVariables(node)
+		for _, outputVar := range outputVars {
+			outputVarTypes[outputVar.Name] = outputVar.Type
+		}
+	}
 	return &model.NodeInstanceDetailDTO{
-		Id:           instance.Id,
-		NodeId:       instance.NodeId,
-		Type:         instance.Type,
-		AddTime:      instance.AddTime,
-		CompleteTime: instance.CompleteTime,
-		Status:       instance.Status,
-		StatusName:   instance.Status.String(),
-		Output:       instance.Output,
-		Error:        instance.Error,
+		Id:                  instance.Id,
+		NodeId:              instance.NodeId,
+		Type:                instance.Type,
+		AddTime:             instance.AddTime,
+		CompleteTime:        instance.CompleteTime,
+		Status:              instance.Status,
+		StatusName:          instance.Status.String(),
+		Output:              instance.Output,
+		Error:               instance.Error,
+		OutputVariableTypes: outputVarTypes,
 	}, nil
 }
 

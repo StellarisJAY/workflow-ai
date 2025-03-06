@@ -58,6 +58,17 @@ func FindNodeById(definition *model.WorkflowDefinition, id string) *model.Node {
 }
 
 func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
+	outputVars := GetNodeOutputVariables(node)
+	idx := slices.IndexFunc(outputVars, func(variable *model.Variable) bool {
+		return variable.Name == varName
+	})
+	if idx == -1 {
+		return nil
+	}
+	return outputVars[idx]
+}
+
+func GetNodeOutputVariables(node *model.Node) []*model.Variable {
 	var outputVars []*model.Variable
 	switch model.NodeType(node.Type) {
 	case model.NodeTypeStart:
@@ -70,14 +81,10 @@ func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
 		outputVars = node.Data.EndNodeData.OutputVariables
 	case model.NodeTypeKnowledgeRetrieval:
 		outputVars = node.Data.RetrieveKnowledgeBaseNodeData.OutputVariables
+	case model.NodeTypeWebSearch:
+		outputVars = node.Data.WebSearchNodeData.OutputVariables
 	}
-	idx := slices.IndexFunc(outputVars, func(variable *model.Variable) bool {
-		return variable.Name == varName
-	})
-	if idx == -1 {
-		return nil
-	}
-	return outputVars[idx]
+	return outputVars
 }
 
 func GetPassedEdges(definition *model.WorkflowDefinition, nodes []*model.NodeStatusDTO,
