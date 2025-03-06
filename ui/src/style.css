@@ -12,6 +12,29 @@
     width: 300px;
 }
 
+.vue-flow__node-crawler {
+    width: 300px;
+}
+
+.vue-flow__node-end {
+    width: 300px;
+}
+
+.vue-flow__node-knowledgeRetrieval {
+    width: 300px;
+}
+
+.vue-flow__node-condition {
+    width: 250px;
+}
+
+.vue-flow__node-webSearch {
+    width: 300px;
+}
+.vue-flow__node-keywordExtraction {
+    width: 300px;
+}
+
 .vue-flow__handle {
     background: #8d8dff;
     width: 10px;
