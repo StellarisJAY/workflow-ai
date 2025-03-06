@@ -22,11 +22,12 @@ const workflowInstanceList = ref([]);
 const query = ref({
   page: 1,
   pageSize: 10,
+  paged: true,
 });
 const total = ref(0);
 
 function listWorkflowInstance() {
-  workflowAPI.list().then(resp=>{
+  workflowAPI.list(query.value).then(resp=>{
     total.value = resp.total;
     workflowInstanceList.value = resp.data;
   });
@@ -60,7 +61,7 @@ onMounted(_=>{
     </template>
   </Table>
 
-  <Pagination :current="query.page" :page-size="query.pageSize" :total="total"></Pagination>
+  <Pagination v-model:current="query.page" :page-size="query.pageSize" :total="total" @change="listWorkflowInstance"/>
 </template>
 
 <style scoped>

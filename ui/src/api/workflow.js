@@ -7,8 +7,8 @@ export default {
     getOutputs: function(workflowId) {
         return api.get("/workflow/outputs/"+workflowId);
     },
-    list: function() {
-        return api.get("/workflow/list");
+    list: function(query) {
+        return api.get("/workflow/list", query);
     },
     detail: function(id) {
         return api.get("/workflow/detail/"+id);

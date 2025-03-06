@@ -16,6 +16,7 @@ import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
 import NodeConstants from "./nodeConstants.js";
 import WebSearchSetting from "./setting/WebSearchSetting.vue";
 import KeywordExtractionSetting from "./setting/KeywordExtractionSetting.vue";
+import QuestionOptimizationSetting from "./setting/QuestionOptimizationSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -86,6 +87,7 @@ const crawlerDrawerOpen = ref(false);
 const conditionDrawerOpen = ref(false);
 const webSearchDrawerOpen = ref(false);
 const keywordExtractionDrawerOpen = ref(false);
+const questionOptimizationDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
 
@@ -103,6 +105,7 @@ onNodeClick(event => {
     case "condition": conditionDrawerOpen.value = true; break;
     case "webSearch": webSearchDrawerOpen.value = true; break;
     case "keywordExtraction": keywordExtractionDrawerOpen.value = true; break;
+    case "questionOptimization": questionOptimizationDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
@@ -297,6 +300,12 @@ function updateTemplate() {
           @close="_=>{keywordExtractionDrawerOpen = false;}"
           :destroy-on-close="true">
     <keywordExtractionSetting :node="currentSettingNodes['keywordExtraction']"/>
+  </Drawer>
+  <Drawer title="提问优化设置" size="large"
+          :open="questionOptimizationDrawerOpen"
+          @close="_=>{questionOptimizationDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <QuestionOptimizationSetting :node="currentSettingNodes['questionOptimization']"/>
   </Drawer>
 </template>
 

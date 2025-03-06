@@ -11,6 +11,7 @@ import templateAPI from "../../api/template.js";
 import {randomUUID} from "../../util/uuid.js";
 import webSearchNode from "./node/webSearchNode.vue";
 import keywordExtractNode from "./node/keywordExtraction.vue";
+import questionOptimizationNode from "./node/questionOptimizationNode.vue";
 
 const nodeTypes = ref({
     llm: markRaw(LLMNode),
@@ -22,6 +23,7 @@ const nodeTypes = ref({
     crawler: markRaw(CrawlerNode),
     webSearch: markRaw(webSearchNode),
     keywordExtraction: markRaw(keywordExtractNode),
+    questionOptimization: markRaw(questionOptimizationNode),
 });
 
 const edgeTypes = ref({
@@ -35,7 +37,8 @@ const nodeTypeOptions = ref([
     { value: "condition", label: "条件", description: "条件分支" },
     { value: "crawler", label: "爬虫", description: "从给定地址爬取文本内容"},
     {value: "webSearch", label: "网页搜索", description: "使用搜索引擎搜索网页内容"},
-    {value: "keywordExtraction", label: "关键词提取", description: "从问题提取关键词"}
+    {value: "keywordExtraction", label: "关键词提取", description: "从问题提取关键词"},
+    {value: "questionOptimization", label: "提问优化", description: "优化用户提出的问题，以适配不同场景"}
 ]);
 
 const llmOutputFormatOptions = [

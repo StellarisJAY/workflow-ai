@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"github.com/StellrisJAY/workflow-ai/internal/common"
+	"time"
+)
 
 type WorkflowInstanceStatus int
 
@@ -76,6 +79,10 @@ type NodeInstance struct {
 
 func (NodeInstance) TableName() string {
 	return "wf_node_instance"
+}
+
+type WorkflowInstanceQuery struct {
+	common.PageQuery
 }
 
 type WorkflowInstanceListDTO struct {

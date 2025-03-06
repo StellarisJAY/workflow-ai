@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/StellrisJAY/workflow-ai/internal/common"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"gorm.io/gorm"
 )
@@ -130,14 +131,21 @@ func (i *InstanceRepo) GetWorkflowDefinition(ctx context.Context, workflowId int
 	return definition, err
 }
 
-func (i *InstanceRepo) ListWorkflowInstance(ctx context.Context) ([]*model.WorkflowInstanceListDTO, error) {
+func (i *InstanceRepo) ListWorkflowInstance(ctx context.Context, query model.WorkflowInstanceQuery) ([]*model.WorkflowInstanceListDTO, int, error) {
 	var result []*model.WorkflowInstanceListDTO
+	p := common.Pagination{
+		Page:     query.Page,
+		PageSize: query.PageSize,
+		Total:    0,
+		Paged:    query.Paged,
+	}
 	err := i.DB(ctx).Table(model.WorkflowInstance{}.TableName() + " wi").
 		Joins("LEFT JOIN wf_template wt ON wt.id = wi.template_id").
+		Scopes(common.WithPagination(&p)).
 		Select("wi.id, wi.template_id, wi.add_time, wi.complete_time, wi.status, wi.add_user, wt.name AS template_name").
 		WithContext(ctx).
 		Scan(&result).Error
-	return result, err
+	return result, p.Total, err
 }
 
 func (i *InstanceRepo) GetWorkflowInstanceDetail(ctx context.Context, workflowId int64) (*model.WorkflowInstanceDetailDTO, error) {

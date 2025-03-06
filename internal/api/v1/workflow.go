@@ -33,7 +33,11 @@ func (w *WorkflowHandler) Start(c *gin.Context) {
 }
 
 func (w *WorkflowHandler) List(c *gin.Context) {
-	list, total, err := w.service.ListWorkflowInstance(c)
+	var query model.WorkflowInstanceQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		panic(err)
+	}
+	list, total, err := w.service.ListWorkflowInstance(c, query)
 	if err != nil {
 		panic(err)
 	}

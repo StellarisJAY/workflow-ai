@@ -49,6 +49,7 @@ function getPrevNodesOutputs(currNodeId) {
             case "knowledgeRetrieval": outputVariables = node.data['retrieveKnowledgeBaseNodeData'].outputVariables; break;
             case "webSearch": outputVariables = node.data['webSearchNodeData'].outputVariables; break;
             case "keywordExtraction": outputVariables = node.data['keywordExtractionNodeData'].outputVariables; break;
+            case "questionOptimization": outputVariables = node.data['questionOptimizationNodeData'].outputVariables; break;
         }
         if (outputVariables) {
             let option = {

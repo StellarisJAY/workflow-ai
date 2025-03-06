@@ -21,7 +21,7 @@ var QuestionOptimizationPrompt = `
 Based on the provided question, optimize the phrases to fit the RAG scenario.
 ## Requirements:
 1. Optimized question must be the same language as the provided question.
-2. Output the keywords in raw text format.
+2. Output the optimized question in raw text format.
 3. Optimize the phrases to fit the RAG scenario.
 4. Fix the grammar and spelling errors.
 ## Example:

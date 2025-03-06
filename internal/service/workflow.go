@@ -40,8 +40,8 @@ func (w *WorkflowService) Start(ctx context.Context, request *model.StartWorkflo
 	return w.engine.Start(ctx, definition, request.TemplateId, 1, request.Inputs)
 }
 
-func (w *WorkflowService) ListWorkflowInstance(ctx context.Context) ([]*model.WorkflowInstanceListDTO, int, error) {
-	instanceList, err := w.instanceRepo.ListWorkflowInstance(ctx)
+func (w *WorkflowService) ListWorkflowInstance(ctx context.Context, query model.WorkflowInstanceQuery) ([]*model.WorkflowInstanceListDTO, int, error) {
+	instanceList, total, err := w.instanceRepo.ListWorkflowInstance(ctx, query)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -49,7 +49,7 @@ func (w *WorkflowService) ListWorkflowInstance(ctx context.Context) ([]*model.Wo
 		instance.StatusName = instance.Status.String()
 		instance.Duration = instance.CompleteTime.Sub(instance.AddTime).String()
 	}
-	return instanceList, len(instanceList), nil
+	return instanceList, total, nil
 }
 
 func (w *WorkflowService) GetWorkflowInstanceDetail(ctx context.Context, workflowId int64) (*model.WorkflowInstanceDetailDTO, error) {
