@@ -7,7 +7,6 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/workflow/websearch"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -15,16 +14,6 @@ import (
 
 func (e *Engine) executeWebSearchNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	nodeData *model.WebSearchNodeData, inputMap map[string]any) {
-	defer func() {
-		if err := recover(); err != nil {
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.(error).Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-		}
-	}()
 	var query string
 	if q, ok := inputMap["query"]; !ok {
 		panic(errors.New("缺少query参数"))

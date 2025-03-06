@@ -27,7 +27,7 @@ const total = ref(0);
 
 function listWorkflowInstance() {
   workflowAPI.list().then(resp=>{
-    total.value = resp.data.total;
+    total.value = resp.total;
     workflowInstanceList.value = resp.data;
   });
 }

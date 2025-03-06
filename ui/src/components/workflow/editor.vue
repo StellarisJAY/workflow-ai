@@ -15,6 +15,7 @@ import {randomUUID} from "../../util/uuid.js";
 import KnowledgeRetrievalSetting from "./setting/KnowledgeRetrievalSetting.vue";
 import NodeConstants from "./nodeConstants.js";
 import WebSearchSetting from "./setting/WebSearchSetting.vue";
+import KeywordExtractionSetting from "./setting/KeywordExtractionSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -84,6 +85,7 @@ const endDrawerOpen = ref(false);
 const crawlerDrawerOpen = ref(false);
 const conditionDrawerOpen = ref(false);
 const webSearchDrawerOpen = ref(false);
+const keywordExtractionDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
 
@@ -100,6 +102,7 @@ onNodeClick(event => {
     case "crawler": crawlerDrawerOpen.value = true; break;
     case "condition": conditionDrawerOpen.value = true; break;
     case "webSearch": webSearchDrawerOpen.value = true; break;
+    case "keywordExtraction": keywordExtractionDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
@@ -235,7 +238,7 @@ function updateTemplate() {
 
 	<Modal :open="newNodeModalOpen" @cancel="closeNewNodeModal" @ok="newNodeConfirm">
 		<template #title>选择节点</template>
-		<Select :options="nodeTypeOptions" v-model:value="selectNodeType"></Select>
+		<Select :options="nodeTypeOptions" v-model:value="selectNodeType" style="width: 200px;"></Select>
 		<p>{{ nodeTypeOptions.find(n => n.value === selectNodeType).description }}</p>
 		<template #okButton>
 			<Button type="primary">确认</Button>
@@ -288,6 +291,12 @@ function updateTemplate() {
           @close="_=>{webSearchDrawerOpen = false;}"
           :destroy-on-close="true">
     <WebSearchSetting :node="currentSettingNodes['webSearch']"/>
+  </Drawer>
+  <Drawer title="关键词提取设置" size="large"
+          :open="keywordExtractionDrawerOpen"
+          @close="_=>{keywordExtractionDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <keywordExtractionSetting :node="currentSettingNodes['keywordExtraction']"/>
   </Drawer>
 </template>
 

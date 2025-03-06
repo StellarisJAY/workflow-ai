@@ -132,95 +132,96 @@ func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.
 	return result, nil
 }
 
-func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance) error {
+func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := r.(error)
+			nodeInstance.Status = model.NodeInstanceStatusFailed
+			nodeInstance.CompleteTime = time.Now()
+			nodeInstance.Error = err.Error()
+			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
+				log.Println("update node instance failed", err)
+			}
+			e.UpdateWorkflowFailed(ctx, nodeInstance.WorkflowId)
+		}
+	}()
 	switch node.Type {
 	case string(model.NodeTypeLLM):
 		llmNodeData := node.Data.LLMNodeData
 		if llmNodeData == nil {
-			return fmt.Errorf("invalid LLM node data")
+			panic(errors.New("invalid LLM node data"))
 		}
 		inputMap, err := e.LookupInputVariables(ctx, llmNodeData.InputVariables, nodeInstance.WorkflowId)
 		if err != nil {
-			return err
+			panic(err)
 		}
-		go func() {
-			e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
-			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
-			} else {
-				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
-			}
-		}()
+		e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
 	case string(model.NodeTypeEnd):
 		endNodeData := node.Data.EndNodeData
 		if endNodeData == nil {
-			return fmt.Errorf("invalid end node data")
+			panic(errors.New("invalid end node data"))
 		}
 		e.executeEndNode(context.TODO(), node, nodeInstance, endNodeData)
 	case string(model.NodeTypeCrawler):
 		crawlerNodeData := node.Data.CrawlerNodeData
 		if crawlerNodeData == nil {
-			return fmt.Errorf("invalid crawler node data")
+			panic(errors.New("invalid crawler node data"))
 		}
 		inputMap, err := e.LookupInputVariables(ctx, crawlerNodeData.InputVariables, nodeInstance.WorkflowId)
 		if err != nil {
-			return err
+			panic(err)
 		}
-		go func() {
-			e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
-			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
-			} else {
-				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
-			}
-		}()
+		e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
 	case string(model.NodeTypeCondition):
 		conditionNodeData := node.Data.ConditionNodeData
 		if conditionNodeData == nil {
-			return fmt.Errorf("invalid condition node data")
+			panic(errors.New("invalid condition node data"))
 		}
 		if err := e.executeConditionNode(context.TODO(), node, conditionNodeData, nodeInstance); err != nil {
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-			e.UpdateWorkflowFailed(ctx, nodeInstance.WorkflowId)
-			return err
+			panic(err)
 		}
 	case string(model.NodeTypeKnowledgeRetrieval):
 		kbRetrievalNodeData := node.Data.RetrieveKnowledgeBaseNodeData
 		if kbRetrievalNodeData == nil {
-			return fmt.Errorf("invalid knowledge base node data")
+			panic(errors.New("invalid knowledge base node data"))
 		}
-		go func() {
-			e.executeKnowledgeRetrieveNode(context.TODO(), node, kbRetrievalNodeData, nodeInstance)
-			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
-			} else {
-				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
-			}
-		}()
+		e.executeKnowledgeRetrieveNode(context.TODO(), node, kbRetrievalNodeData, nodeInstance)
 	case string(model.NodeTypeWebSearch):
 		webSearchNodeData := node.Data.WebSearchNodeData
 		if webSearchNodeData == nil {
-			return fmt.Errorf("invalid webSearch Node Data")
+			panic(errors.New("invalid webSearch Node Data"))
 		}
 		inputMap, err := e.LookupInputVariables(ctx, webSearchNodeData.InputVariables, nodeInstance.WorkflowId)
 		if err != nil {
-			return err
+			panic(err)
 		}
-		go func() {
-			e.executeWebSearchNode(context.TODO(), node, nodeInstance, webSearchNodeData, inputMap)
-			if nodeInstance.Status != model.NodeInstanceStatusFailed {
-				e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
-			} else {
-				e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
-			}
-		}()
+		e.executeWebSearchNode(context.TODO(), node, nodeInstance, webSearchNodeData, inputMap)
+	case string(model.NodeTypeKeywordExtraction):
+		keywordExtractionNodeData := node.Data.KeywordExtractionNodeData
+		if keywordExtractionNodeData == nil {
+			panic(errors.New("invalid keyword extraction node data"))
+		}
+		inputMap, err := e.LookupInputVariables(ctx, keywordExtractionNodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			panic(err)
+		}
+		e.executeKeywordExtractionNode(context.TODO(), node, nodeInstance, keywordExtractionNodeData, inputMap)
+	case string(model.NodeTypeQuestionOptimization):
+		llmTaskNodeData := node.Data.QuestionOptimizationNodeData
+		if llmTaskNodeData == nil {
+			panic(errors.New("invalid llm task node data"))
+		}
+		inputMap, err := e.LookupInputVariables(ctx, llmTaskNodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			panic(err)
+		}
+		e.executeQuestionOptimizeNode(context.TODO(), node, nodeInstance, llmTaskNodeData, inputMap)
 	}
-	return nil
+	if nodeInstance.Status != model.NodeInstanceStatusFailed {
+		e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
+	} else {
+		e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
+	}
 }
 
 func (e *Engine) UpdateWorkflowFailed(ctx context.Context, workflowId int64) {
@@ -253,6 +254,10 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 	} else if status == model.WorkflowInstanceStatusCompleted || status == model.WorkflowInstanceStatusFailed {
 		return
 	}
+	var executableNodes []struct {
+		NodeInstance *model.NodeInstance
+		Node         *model.Node
+	}
 	for _, next := range nextNodes {
 		nodes := GetPrevNodes(definition, next)
 		ids := make([]string, len(nodes))
@@ -282,30 +287,22 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 			log.Println("insert node instance error", err)
 			continue
 		}
-		// 创建节点任务
-		if err := e.executeNode(context.TODO(), next, nodeInstance); err != nil {
-			log.Println("execute node instance error", err)
-		}
+		executableNodes = append(executableNodes, struct {
+			NodeInstance *model.NodeInstance
+			Node         *model.Node
+		}{NodeInstance: nodeInstance, Node: next})
+	}
+
+	for _, executableNode := range executableNodes {
+		go e.executeNode(context.Background(), executableNode.Node, executableNode.NodeInstance)
 	}
 }
 
 func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	endNodeData *model.EndNodeData) {
-	defer func() {
-		if r := recover(); r != nil {
-			err := r.(error)
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-		}
-	}()
 	outputVars := endNodeData.OutputVariables
 	outputMap, err := e.LookupInputVariables(ctx, outputVars, nodeInstance.WorkflowId)
 	if err != nil {
-		log.Println("find output map error", err)
 		panic(errors.New("无法获取output所需的变量"))
 	}
 	outputs, _ := json.Marshal(outputMap)
@@ -313,13 +310,13 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-		log.Println("update node instance error:", err)
+		panic(err)
 	}
 	if err := e.instanceRepo.UpdateWorkflowInstance(ctx, &model.WorkflowInstance{
 		Id:           nodeInstance.WorkflowId,
 		Status:       model.WorkflowInstanceStatusCompleted,
 		CompleteTime: time.Now(),
 	}); err != nil {
-		log.Println("update workflow instance error:", err)
+		panic(err)
 	}
 }

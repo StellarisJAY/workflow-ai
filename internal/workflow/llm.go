@@ -18,49 +18,11 @@ import (
 func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	llmNodeData *model.LLMNodeData, inputMap map[string]any) {
 	detail, _ := e.llmRepo.GetDetail(ctx, llmNodeData.ModelId)
-	// 执行过程出错，将节点实例改为失败状态
-	defer func() {
-		if r := recover(); r != nil {
-			err := r.(error)
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.Error()
-			nodeInstance.Output = "{}"
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-		}
-	}()
 	if detail == nil {
 		panic(errors.New("无法找到节点需要的大模型"))
 	}
 	// 创建大模型接口
-	var llm llms.Model
-	var err error
-	switch model.ApiType(detail.ApiType) {
-	case model.ApiTypeOpenAI:
-		options := []openai.Option{
-			openai.WithModel(detail.Code),
-			openai.WithBaseURL(detail.BaseUrl),
-			openai.WithToken(detail.ApiKey),
-		}
-		if llmNodeData.OutputFormat == "JSON" {
-			options = append(options, openai.WithResponseFormat(openai.ResponseFormatJSON))
-		}
-		llm, err = openai.New(options...)
-	case model.ApiTypeOllama:
-		options := []ollama.Option{
-			ollama.WithModel(detail.Code),
-			ollama.WithServerURL(detail.BaseUrl),
-		}
-		if llmNodeData.OutputFormat == "JSON" {
-			options = append(options, ollama.WithFormat("json"))
-		}
-		llm, err = ollama.New(options...)
-	default:
-		panic(errors.New("不支持的大模型类型"))
-	}
-
+	llm, err := makeModelAPI(detail, llmNodeData.OutputFormat)
 	if err != nil {
 		log.Println("create llm error:", err)
 		panic(errors.New("创建大模型失败"))
@@ -101,4 +63,60 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
 		panic(fmt.Errorf("llm output format error: %v", err))
 	}
+}
+
+func makeModelAPI(detail *model.LLMDetailDTO, outputFormat string) (llms.Model, error) {
+	// 创建大模型接口
+	var llm llms.Model
+	var err error
+	switch model.ApiType(detail.ApiType) {
+	case model.ApiTypeOpenAI:
+		options := []openai.Option{
+			openai.WithModel(detail.Code),
+			openai.WithBaseURL(detail.BaseUrl),
+			openai.WithToken(detail.ApiKey),
+		}
+		if outputFormat == "JSON" {
+			options = append(options, openai.WithResponseFormat(openai.ResponseFormatJSON))
+		}
+		llm, err = openai.New(options...)
+	case model.ApiTypeOllama:
+		options := []ollama.Option{
+			ollama.WithModel(detail.Code),
+			ollama.WithServerURL(detail.BaseUrl),
+		}
+		if outputFormat == "JSON" {
+			options = append(options, ollama.WithFormat("json"))
+		}
+		llm, err = ollama.New(options...)
+	default:
+		return nil, errors.New("不支持的大模型类型")
+	}
+	return llm, err
+}
+
+func executeLLMTask(llm *model.LLMDetailDTO, promptTemplate string, outputFormat string, inputMap map[string]any) (string, error) {
+	modelAPI, err := makeModelAPI(llm, outputFormat)
+	if err != nil {
+		return "", err
+	}
+	inputVariables := make([]string, len(inputMap))
+	for k := range inputMap {
+		inputVariables = append(inputVariables, k)
+	}
+	prompt := prompts.NewPromptTemplate(promptTemplate, inputVariables)
+
+	chain := chains.NewLLMChain(modelAPI, prompt)
+	response, err := chain.Call(context.TODO(), inputMap,
+		chains.WithTemperature(0.2))
+	if err != nil {
+		return "", err
+	}
+	output := response[chain.OutputKey].(string)
+	if outputFormat == "JSON" {
+		output = strings.TrimPrefix(output, "```json")
+		output = strings.TrimSuffix(output, "```")
+		output = strings.TrimSpace(output)
+	}
+	return output, nil
 }

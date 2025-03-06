@@ -3,15 +3,17 @@ package model
 type NodeType string
 
 const (
-	NodeTypeStart              NodeType = "start"              // 开始节点
-	NodeTypeLLM                NodeType = "llm"                // 大模型节点
-	NodeTypeKnowledgeRetrieval NodeType = "knowledgeRetrieval" // 知识库检索节点
-	NodeTypeKnowledgeWrite     NodeType = "knowledgeWrite"     // 写入知识库节点
-	NodeTypeEnd                NodeType = "end"                // 结束节点
-	NodeTypeCrawler            NodeType = "crawler"            // 爬虫节点
-	NodeTypeCondition          NodeType = "condition"          // 条件判断节点
-	NodeTypeKeywordExtraction  NodeType = "keywordExtraction"  // 关键词提取节点
-	NodeTypeWebSearch          NodeType = "webSearch"          // 搜索引擎节点
+	NodeTypeStart                NodeType = "start"                // 开始节点
+	NodeTypeLLM                  NodeType = "llm"                  // 大模型节点
+	NodeTypeKnowledgeRetrieval   NodeType = "knowledgeRetrieval"   // 知识库检索节点
+	NodeTypeKnowledgeWrite       NodeType = "knowledgeWrite"       // 写入知识库节点
+	NodeTypeEnd                  NodeType = "end"                  // 结束节点
+	NodeTypeCrawler              NodeType = "crawler"              // 爬虫节点
+	NodeTypeCondition            NodeType = "condition"            // 条件判断节点
+	NodeTypeKeywordExtraction    NodeType = "keywordExtraction"    // 关键词提取节点
+	NodeTypeWebSearch            NodeType = "webSearch"            // 搜索引擎节点
+	NodeTypeQuestionOptimization NodeType = "questionOptimization" // 问题优化节点
+	NodeTypeConcentrator         NodeType = "concentrator"         // 集线器节点
 )
 
 type VariableType string
@@ -56,6 +58,8 @@ type NodeData struct {
 	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`               // 爬虫节点数据
 	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`             // 条件判断节点数据
 	WebSearchNodeData             *WebSearchNodeData             `json:"webSearchNodeData"`             // 搜索引擎节点数据
+	KeywordExtractionNodeData     *KeywordExtractionNodeData     `json:"keywordExtractionNodeData"`     // 关键词提取节点数据
+	QuestionOptimizationNodeData  *QuestionOptimizationNodeData  `json:"questionOptimizationNodeData"`  // 问题优化节点数据
 }
 
 // LLMNodeData LLM节点数据
@@ -137,6 +141,21 @@ type WebSearchType string
 
 type WebSearchNodeData struct {
 	TopN            int         `json:"topN"` // 返回结果数量
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
+}
+
+type KeywordExtractionNodeData struct {
+	ModelId         int64       `json:"modelId,string"`
+	ModelName       string      `json:"modelName"`
+	Count           int         `json:"count"`
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
+}
+
+type QuestionOptimizationNodeData struct {
+	ModelId         int64       `json:"modelId,string"`
+	ModelName       string      `json:"modelName"`
 	InputVariables  []*Variable `json:"inputVariables"`
 	OutputVariables []*Variable `json:"outputVariables"`
 }
@@ -243,13 +262,36 @@ var KeywordExtractionNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
-		CrawlerNodeData: &CrawlerNodeData{
+		KeywordExtractionNodeData: &KeywordExtractionNodeData{
+			ModelId:   0,
+			ModelName: "",
+			Count:     3,
 			InputVariables: []*Variable{
 				{Name: "question", Type: VariableTypeString, Required: true, AllowRef: true}, // 问题
 			},
 			OutputVariables: []*Variable{
 				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 关键词数量
 				{Name: "keywords", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 关键词列表
+			},
+		},
+	},
+}
+
+var QuestionOptimizationNodePrototype = &Node{
+	Type: string(NodeTypeQuestionOptimization),
+	Data: NodeData{
+		Name:                 "问题优化",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
+		QuestionOptimizationNodeData: &QuestionOptimizationNodeData{
+			ModelId:   0,
+			ModelName: "",
+			InputVariables: []*Variable{
+				{Name: "question", Type: VariableTypeString, Required: true, AllowRef: true}, // 问题
+			},
+			OutputVariables: []*Variable{
+				{Name: "output", Type: VariableTypeString, Required: true, Fixed: true}, // 优化后的问题
 			},
 		},
 	},

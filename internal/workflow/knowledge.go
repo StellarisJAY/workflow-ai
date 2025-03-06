@@ -5,22 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
-	"log"
 	"strconv"
 	"time"
 )
 
 func (e *Engine) executeKnowledgeRetrieveNode(ctx context.Context, node *model.Node,
 	nodeData *model.RetrieveKnowledgeBaseNodeData, nodeInstance *model.NodeInstance) {
-	defer func() {
-		if err := recover(); err != nil {
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.Error = err.(error).Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update kb node instance error:", err)
-			}
-		}
-	}()
 	inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
 	if err != nil {
 		panic(err)

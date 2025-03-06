@@ -85,6 +85,10 @@ func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.Nod
 		prototype = model.KbRetrievalNodePrototype
 	case model.NodeTypeWebSearch:
 		prototype = model.WebSearchNodePrototype
+	case model.NodeTypeKeywordExtraction:
+		prototype = model.KeywordExtractionNodePrototype
+	case model.NodeTypeQuestionOptimization:
+		prototype = model.QuestionOptimizationNodePrototype
 	default:
 		return "", errors.New("无效的节点类型")
 	}

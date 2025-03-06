@@ -83,6 +83,10 @@ func GetNodeOutputVariables(node *model.Node) []*model.Variable {
 		outputVars = node.Data.RetrieveKnowledgeBaseNodeData.OutputVariables
 	case model.NodeTypeWebSearch:
 		outputVars = node.Data.WebSearchNodeData.OutputVariables
+	case model.NodeTypeKeywordExtraction:
+		outputVars = node.Data.KeywordExtractionNodeData.OutputVariables
+	case model.NodeTypeQuestionOptimization:
+		outputVars = node.Data.QuestionOptimizationNodeData.OutputVariables
 	}
 	return outputVars
 }

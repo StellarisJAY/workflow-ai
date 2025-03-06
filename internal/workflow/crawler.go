@@ -17,17 +17,6 @@ import (
 
 func (e *Engine) executeCrawlerNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	crawlerData *model.CrawlerNodeData, inputMap map[string]any) {
-	defer func() {
-		if r := recover(); r != nil {
-			err := r.(error)
-			nodeInstance.Status = model.NodeInstanceStatusFailed
-			nodeInstance.CompleteTime = time.Now()
-			nodeInstance.Error = err.Error()
-			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
-				log.Println("update node instance error:", err)
-			}
-		}
-	}()
 	urlStr, ok := inputMap["url"]
 	if !ok {
 		panic(errors.New("url参数不存在"))

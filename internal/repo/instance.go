@@ -100,6 +100,17 @@ func (i *InstanceRepo) CountRunningNodeInstancesWithNodeIds(ctx context.Context,
 	return count, err
 }
 
+func (i *InstanceRepo) CountCompletedNodeInstancesWithNodeIds(ctx context.Context, workflowId int64, nodeIds []string) (int64, error) {
+	var count int64
+	err := i.DB(ctx).Table(model.NodeInstance{}.TableName()).
+		WithContext(ctx).
+		Where("workflow_id =?", workflowId).
+		Where("node_id IN (?)", nodeIds).
+		Where("status =?", model.NodeInstanceStatusCompleted).
+		Count(&count).Error
+	return count, err
+}
+
 func (i *InstanceRepo) UpdateWorkflowInstance(ctx context.Context, instance *model.WorkflowInstance) error {
 	return i.DB(ctx).Table(model.WorkflowInstance{}.TableName()).WithContext(ctx).
 		Where("id=?", instance.Id).
