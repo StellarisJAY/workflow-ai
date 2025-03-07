@@ -245,7 +245,10 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		e.executeOCRNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	}
 	if nodeInstance.Status != model.NodeInstanceStatusFailed {
-		e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
+		// 条件节点已经推进了流程，不需要再执行后续节点
+		if nodeInstance.Type != model.NodeTypeCondition {
+			e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
+		}
 	} else {
 		e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
 	}
