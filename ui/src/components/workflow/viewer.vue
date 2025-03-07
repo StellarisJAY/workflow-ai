@@ -152,7 +152,7 @@ function nodeClickHandler(event) {
             <p>{{item}}</p>
           </CollapsePanel>
         </Collapse>
-        <img v-if="currentNodeOutputVarTypes[key]==='image_file'" alt="key" :src="fsAPI.fileSrc(value)"/>
+        <img v-if="currentNodeOutputVarTypes[key]==='image_file'" alt="key" :src="fsAPI.fileSrc(value)" width="100%"/>
       </CollapsePanel>
     </Collapse>
     <h4 v-if="currentNodeInstance['error']">错误信息</h4>

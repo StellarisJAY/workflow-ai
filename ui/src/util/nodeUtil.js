@@ -51,6 +51,7 @@ function getPrevNodesOutputs(currNodeId) {
             case "keywordExtraction": outputVariables = node.data['keywordExtractionNodeData'].outputVariables; break;
             case "questionOptimization": outputVariables = node.data['questionOptimizationNodeData'].outputVariables; break;
             case "imageUnderstanding": outputVariables = node.data['imageUnderstandingNodeData'].outputVariables; break;
+            case "ocr": outputVariables = node.data['ocrNodeData'].outputVariables; break;
         }
         if (outputVariables) {
             let option = {

@@ -70,7 +70,7 @@ func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
 
 func GetNodeOutputVariables(node *model.Node) []*model.Variable {
 	var outputVars []*model.Variable
-	switch model.NodeType(node.Type) {
+	switch node.Type {
 	case model.NodeTypeStart:
 		outputVars = node.Data.StartNodeData.InputVariables
 	case model.NodeTypeLLM:
@@ -89,6 +89,8 @@ func GetNodeOutputVariables(node *model.Node) []*model.Variable {
 		outputVars = node.Data.QuestionOptimizationNodeData.OutputVariables
 	case model.NodeTypeImageUnderstanding:
 		outputVars = node.Data.ImageUnderstandingNodeData.OutputVariables
+	case model.NodeTypeOCR:
+		outputVars = node.Data.OCRNodeData.OutputVariables
 	}
 	return outputVars
 }

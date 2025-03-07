@@ -31,3 +31,11 @@ Question: 分布式系统面临哪些麻烦？
 分布式系统面临哪些挑战?
 ## Question: {{.question}}
 `
+
+var OCRPrompt = `
+# Role: You are an text analyst.
+## Task:
+Extract the text from the image.
+## Requirements:
+1. Output the keywords in raw text format.
+2. If there is no text in the image, output "".`

@@ -91,6 +91,8 @@ func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.Nod
 		prototype = model.QuestionOptimizationNodePrototype
 	case model.NodeTypeImageUnderstanding:
 		prototype = model.ImageUnderstandingNodePrototype
+	case model.NodeTypeOCR:
+		prototype = model.OCRNodePrototype
 	default:
 		return "", errors.New("无效的节点类型")
 	}

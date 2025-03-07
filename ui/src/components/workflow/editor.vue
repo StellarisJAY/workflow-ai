@@ -18,6 +18,7 @@ import WebSearchSetting from "./setting/WebSearchSetting.vue";
 import KeywordExtractionSetting from "./setting/KeywordExtractionSetting.vue";
 import QuestionOptimizationSetting from "./setting/QuestionOptimizationSetting.vue";
 import ImageUnderstandingSetting from "./setting/ImageUnderstandingSetting.vue";
+import OCRSetting from "./setting/OCRSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -90,6 +91,7 @@ const webSearchDrawerOpen = ref(false);
 const keywordExtractionDrawerOpen = ref(false);
 const questionOptimizationDrawerOpen = ref(false);
 const imageUnderstandingDrawerOpen = ref(false);
+const ocrDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
 
@@ -109,6 +111,7 @@ onNodeClick(event => {
     case "keywordExtraction": keywordExtractionDrawerOpen.value = true; break;
     case "questionOptimization": questionOptimizationDrawerOpen.value = true; break;
     case "imageUnderstanding": imageUnderstandingDrawerOpen.value = true; break;
+    case "ocr": ocrDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
@@ -316,6 +319,13 @@ function updateTemplate() {
           @close="_=>{imageUnderstandingDrawerOpen = false;}"
           :destroy-on-close="true">
     <ImageUnderstandingSetting :node="currentSettingNodes['imageUnderstanding']"/>
+  </Drawer>
+
+  <Drawer title="文字提取设置" size="large"
+          :open="ocrDrawerOpen"
+          @close="_=>{ocrDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <OCRSetting :node="currentSettingNodes['ocr']"/>
   </Drawer>
 </template>
 

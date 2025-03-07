@@ -3,7 +3,7 @@ import {useRoute, useRouter} from "vue-router";
 import {onMounted, ref} from "vue";
 import templateAPI from "../../api/template.js";
 import {Card, List, ListItem, Pagination, Dropdown, Menu, MenuItem, Popconfirm, message,
-  PageHeader, Button, Drawer, Form, FormItem, Input, Upload} from "ant-design-vue";
+  PageHeader, Button, Drawer, Form, FormItem, Input, Upload, Spin} from "ant-design-vue";
 import {EditOutlined, PlayCircleOutlined, EllipsisOutlined} from "@ant-design/icons-vue";
 import workflowAPI from "../../api/workflow.js";
 import fsAPI from "../../api/fs.js";
@@ -20,6 +20,7 @@ const total = ref(0);
 const executeInputOpen = ref(false);
 const executeInputVars = ref([]);
 const startingTemplateId = ref("");
+const executePending = ref(false);
 
 const fileLists = ref({});
 
@@ -56,6 +57,7 @@ function openExecuteInputVariableDrawer(id) {
 }
 
 function startWorkflow() {
+  executePending.value = true;
   const form = new FormData();
   for (let k in fileLists.value) {
     form.append(k, fileLists.value[k][0].originFileObj);
@@ -82,7 +84,11 @@ function startWorkflow() {
       message.success("开始执行成功");
       const workflowId = resp.data['workflowId'];
       router.push("/view/"+workflowId);
+    }).catch(()=>{
+      executePending.value = false;
     });
+  }).catch(err=>{
+    executePending.value = false;
   })
 
 }
@@ -136,16 +142,18 @@ onMounted(_=>{
   </List>
   <Pagination :current="query.page" :page-size="query.pageSize" :total="total"></Pagination>
   <Drawer title="输入变量" :open="executeInputOpen" @close="_=>{executeInputOpen = false;}">
-    <Form>
-      <FormItem v-for="variable in executeInputVars" :label="variable.name">
-        <Input v-model:value="variable.value" v-if="variable.type === 'string'" placeholder="变量值"/>
-        <Upload v-else :file-list="fileLists[variable.name]" :multiple="false"
-                :before-upload="()=>false" @change="ev=>onUploadFileChange(ev, variable)">
-          <Button size="small">上传</Button>
-        </Upload>
-      </FormItem>
-    </Form>
-    <Button type="primary" @click="startWorkflow">执行流程</Button>
+    <Spin :spinning="executePending">
+      <Form>
+        <FormItem v-for="variable in executeInputVars" :label="variable.name">
+          <Input v-model:value="variable.value" v-if="variable.type === 'string'" placeholder="变量值"/>
+          <Upload v-else :file-list="fileLists[variable.name]" :multiple="false"
+                  :before-upload="()=>false" @change="ev=>onUploadFileChange(ev, variable)">
+            <Button size="small">上传</Button>
+          </Upload>
+        </FormItem>
+      </Form>
+      <Button type="primary" @click="startWorkflow">执行流程</Button>
+    </Spin>
   </Drawer>
 </template>
 

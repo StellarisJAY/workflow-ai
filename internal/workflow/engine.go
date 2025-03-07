@@ -232,6 +232,16 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			panic(err)
 		}
 		e.executeImageUnderstandingNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
+	case model.NodeTypeOCR:
+		nodeData := node.Data.OCRNodeData
+		if nodeData == nil {
+			panic(errors.New("invalid ocr node data"))
+		}
+		inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			panic(err)
+		}
+		e.executeOCRNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	}
 	if nodeInstance.Status != model.NodeInstanceStatusFailed {
 		e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)

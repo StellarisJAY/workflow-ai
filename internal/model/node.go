@@ -14,6 +14,7 @@ const (
 	NodeTypeWebSearch            NodeType = "webSearch"            // 搜索引擎节点
 	NodeTypeQuestionOptimization NodeType = "questionOptimization" // 问题优化节点
 	NodeTypeImageUnderstanding   NodeType = "imageUnderstanding"   // 图像理解节点
+	NodeTypeOCR                  NodeType = "ocr"                  // OCR文档识别节点
 )
 
 type VariableType string
@@ -62,6 +63,7 @@ type NodeData struct {
 	KeywordExtractionNodeData     *KeywordExtractionNodeData     `json:"keywordExtractionNodeData,omitempty"`     // 关键词提取节点数据
 	QuestionOptimizationNodeData  *QuestionOptimizationNodeData  `json:"questionOptimizationNodeData,omitempty"`  // 问题优化节点数据
 	ImageUnderstandingNodeData    *ImageUnderstandingNodeData    `json:"imageUnderstandingNodeData,omitempty"`    // 图像理解节点数据
+	OCRNodeData                   *OCRNodeData                   `json:"ocrNodeData,omitempty"`                   // OCR文档识别节点数据
 }
 
 // LLMNodeData LLM节点数据
@@ -167,6 +169,13 @@ type ImageUnderstandingNodeData struct {
 	ModelName       string      `json:"modelName"`
 	Prompt          string      `json:"prompt"`
 	OutputFormat    string      `json:"outputFormat"`
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
+}
+
+type OCRNodeData struct {
+	ModelId         int64       `json:"modelId,string"`
+	ModelName       string      `json:"modelName"`
 	InputVariables  []*Variable `json:"inputVariables"`
 	OutputVariables []*Variable `json:"outputVariables"`
 }
@@ -345,6 +354,24 @@ var ImageUnderstandingNodePrototype = &Node{
 				{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true, AllowRef: true, IsRef: true},
 			},
 			OutputVariables: []*Variable{},
+		},
+	},
+}
+
+var OCRNodePrototype = &Node{
+	Type: NodeTypeOCR,
+	Data: NodeData{
+		Name:                 "图片文字提取",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    false,
+		OCRNodeData: &OCRNodeData{
+			InputVariables: []*Variable{
+				{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true, AllowRef: true, IsRef: true},
+			},
+			OutputVariables: []*Variable{
+				{Name: "document", Type: VariableTypeString, Required: true, Fixed: true},
+			},
 		},
 	},
 }

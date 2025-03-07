@@ -13,6 +13,7 @@ import webSearchNode from "./node/webSearchNode.vue";
 import keywordExtractNode from "./node/keywordExtraction.vue";
 import questionOptimizationNode from "./node/questionOptimizationNode.vue";
 import imageUnderstandingNode from "./node/imageUnderstanding.vue";
+import ocrNode from "./node/ocrNode.vue";
 
 const nodeTypes = ref({
     llm: markRaw(LLMNode),
@@ -26,6 +27,7 @@ const nodeTypes = ref({
     keywordExtraction: markRaw(keywordExtractNode),
     questionOptimization: markRaw(questionOptimizationNode),
     imageUnderstanding: markRaw(imageUnderstandingNode),
+    ocr: markRaw(ocrNode),
 });
 
 const edgeTypes = ref({
@@ -41,7 +43,8 @@ const nodeTypeOptions = ref([
     {value: "webSearch", label: "网页搜索", description: "使用搜索引擎搜索网页内容"},
     {value: "keywordExtraction", label: "关键词提取", description: "从问题提取关键词"},
     {value: "questionOptimization", label: "提问优化", description: "优化用户提出的问题，以适配不同场景"},
-    {value: "imageUnderstanding", label: "图像理解", description: "根据提示词理解图片"}
+    {value: "imageUnderstanding", label: "图像理解", description: "根据提示词理解图片"},
+    {value: "ocr", label: "文字提取", description: "从图片提取文字"}
 ]);
 
 const llmOutputFormatOptions = [
