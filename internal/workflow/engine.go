@@ -9,6 +9,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/rag"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
+	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
 	"github.com/bwmarrin/snowflake"
 	"log"
 	"slices"
@@ -20,22 +21,27 @@ type Engine struct {
 	instanceRepo *repo.InstanceRepo
 	tm           *repo.TransactionManager
 	snowflake    *snowflake.Node
-	llmRepo      *repo.LLMRepo
+	modelRepo    *repo.ModelRepo
 	kbRepo       *repo.KnowledgeBaseRepo
 	rag          *rag.DocumentProcessor
 	conf         *config.Config
+	fileRepo     *repo.FileRepo
+	fileStore    fs.FileStore
 }
 
-func NewEngine(instanceRepo *repo.InstanceRepo, llmRepo *repo.LLMRepo, snowflake *snowflake.Node,
-	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor, conf *config.Config) *Engine {
+func NewEngine(instanceRepo *repo.InstanceRepo, modelRepo *repo.ModelRepo, snowflake *snowflake.Node,
+	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor, conf *config.Config,
+	fileRepo *repo.FileRepo, fileStore fs.FileStore) *Engine {
 	return &Engine{
 		instanceRepo: instanceRepo,
 		tm:           tm,
 		snowflake:    snowflake,
-		llmRepo:      llmRepo,
+		modelRepo:    modelRepo,
 		kbRepo:       kbRepo,
 		rag:          rag,
 		conf:         conf,
+		fileRepo:     fileRepo,
+		fileStore:    fileStore,
 	}
 }
 
@@ -45,7 +51,7 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	if err := json.Unmarshal([]byte(defJSON), &definition); err != nil {
 		return 0, fmt.Errorf("invalid workflow definition")
 	}
-	idx := slices.IndexFunc(definition.Nodes, func(n *model.Node) bool { return n.Type == string(model.NodeTypeStart) })
+	idx := slices.IndexFunc(definition.Nodes, func(n *model.Node) bool { return n.Type == model.NodeTypeStart })
 	if idx == -1 {
 		return 0, fmt.Errorf("missing start node")
 	}
@@ -146,23 +152,23 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		}
 	}()
 	switch node.Type {
-	case string(model.NodeTypeLLM):
+	case model.NodeTypeLLM:
 		llmNodeData := node.Data.LLMNodeData
 		if llmNodeData == nil {
-			panic(errors.New("invalid LLM node data"))
+			panic(errors.New("invalid Model node data"))
 		}
 		inputMap, err := e.LookupInputVariables(ctx, llmNodeData.InputVariables, nodeInstance.WorkflowId)
 		if err != nil {
 			panic(err)
 		}
 		e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
-	case string(model.NodeTypeEnd):
+	case model.NodeTypeEnd:
 		endNodeData := node.Data.EndNodeData
 		if endNodeData == nil {
 			panic(errors.New("invalid end node data"))
 		}
 		e.executeEndNode(context.TODO(), node, nodeInstance, endNodeData)
-	case string(model.NodeTypeCrawler):
+	case model.NodeTypeCrawler:
 		crawlerNodeData := node.Data.CrawlerNodeData
 		if crawlerNodeData == nil {
 			panic(errors.New("invalid crawler node data"))
@@ -172,7 +178,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			panic(err)
 		}
 		e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
-	case string(model.NodeTypeCondition):
+	case model.NodeTypeCondition:
 		conditionNodeData := node.Data.ConditionNodeData
 		if conditionNodeData == nil {
 			panic(errors.New("invalid condition node data"))
@@ -180,13 +186,13 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		if err := e.executeConditionNode(context.TODO(), node, conditionNodeData, nodeInstance); err != nil {
 			panic(err)
 		}
-	case string(model.NodeTypeKnowledgeRetrieval):
+	case model.NodeTypeKnowledgeRetrieval:
 		kbRetrievalNodeData := node.Data.RetrieveKnowledgeBaseNodeData
 		if kbRetrievalNodeData == nil {
 			panic(errors.New("invalid knowledge base node data"))
 		}
 		e.executeKnowledgeRetrieveNode(context.TODO(), node, kbRetrievalNodeData, nodeInstance)
-	case string(model.NodeTypeWebSearch):
+	case model.NodeTypeWebSearch:
 		webSearchNodeData := node.Data.WebSearchNodeData
 		if webSearchNodeData == nil {
 			panic(errors.New("invalid webSearch Node Data"))
@@ -196,7 +202,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			panic(err)
 		}
 		e.executeWebSearchNode(context.TODO(), node, nodeInstance, webSearchNodeData, inputMap)
-	case string(model.NodeTypeKeywordExtraction):
+	case model.NodeTypeKeywordExtraction:
 		keywordExtractionNodeData := node.Data.KeywordExtractionNodeData
 		if keywordExtractionNodeData == nil {
 			panic(errors.New("invalid keyword extraction node data"))
@@ -206,7 +212,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			panic(err)
 		}
 		e.executeKeywordExtractionNode(context.TODO(), node, nodeInstance, keywordExtractionNodeData, inputMap)
-	case string(model.NodeTypeQuestionOptimization):
+	case model.NodeTypeQuestionOptimization:
 		llmTaskNodeData := node.Data.QuestionOptimizationNodeData
 		if llmTaskNodeData == nil {
 			panic(errors.New("invalid llm task node data"))
@@ -216,6 +222,16 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			panic(err)
 		}
 		e.executeQuestionOptimizeNode(context.TODO(), node, nodeInstance, llmTaskNodeData, inputMap)
+	case model.NodeTypeImageUnderstanding:
+		nodeData := node.Data.ImageUnderstandingNodeData
+		if nodeData == nil {
+			panic(errors.New("invalid image understanding node data"))
+		}
+		inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
+		if err != nil {
+			panic(err)
+		}
+		e.executeImageUnderstandingNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	}
 	if nodeInstance.Status != model.NodeInstanceStatusFailed {
 		e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)

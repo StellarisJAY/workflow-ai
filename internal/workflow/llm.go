@@ -17,7 +17,7 @@ import (
 
 func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	llmNodeData *model.LLMNodeData, inputMap map[string]any) {
-	detail, _ := e.llmRepo.GetDetail(ctx, llmNodeData.ModelId)
+	detail, _ := e.modelRepo.GetDetail(ctx, llmNodeData.ModelId)
 	if detail == nil {
 		panic(errors.New("无法找到节点需要的大模型"))
 	}
@@ -65,7 +65,7 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	}
 }
 
-func makeModelAPI(detail *model.LLMDetailDTO, outputFormat string) (llms.Model, error) {
+func makeModelAPI(detail *model.ModelDetailDTO, outputFormat string) (llms.Model, error) {
 	// 创建大模型接口
 	var llm llms.Model
 	var err error
@@ -95,7 +95,7 @@ func makeModelAPI(detail *model.LLMDetailDTO, outputFormat string) (llms.Model, 
 	return llm, err
 }
 
-func executeLLMTask(llm *model.LLMDetailDTO, promptTemplate string, outputFormat string, inputMap map[string]any) (string, error) {
+func executeLLMTask(llm *model.ModelDetailDTO, promptTemplate string, outputFormat string, inputMap map[string]any) (string, error) {
 	modelAPI, err := makeModelAPI(llm, outputFormat)
 	if err != nil {
 		return "", err

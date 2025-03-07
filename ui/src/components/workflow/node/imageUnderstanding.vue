@@ -17,15 +17,15 @@ onMounted(()=>{
 });
 
 function onNodeDelete(ev) {
-  const llmNodeData = props.data["llmNodeData"];
-  NodeUtil.resetInputVariableRef(llmNodeData, id=>ev.detail.id === id);
+  const imageUnderstandingNodeData = props.data["imageUnderstandingNodeData"];
+  NodeUtil.resetInputVariableRef(imageUnderStandingNodeData, id=>ev.detail.id === id);
 }
 
 function onEdgeDelete(ev) {
   // 获取所有前驱节点，通过判断变量引用节点是否在前驱节点列表判断是否需要重置引用
   const prevNodes = NodeUtil.getPrevNodes(props.id, getNodes.value, getEdges.value).map(node=>node.id);
-  const llmNodeData = props.data["llmNodeData"];
-  NodeUtil.resetInputVariableRef(llmNodeData, id=>!prevNodes.includes(id));
+  const imageUnderstandingNodeData = props.data["imageUnderstandingNodeData"];
+  NodeUtil.resetInputVariableRef(imageUnderstandingNodeData, id=>!prevNodes.includes(id));
 }
 </script>
 
@@ -37,10 +37,10 @@ function onEdgeDelete(ev) {
       <node-extra :id="id" :type="type" :data="data" :status="node.status" :editable="true"/>
     </template>
     <FormItem label="模型">
-      {{data['llmNodeData']['modelName']}}
+      {{data['imageUnderstandingNodeData']['modelName']}}
     </FormItem>
-    <node-variable-display :input-variables="data['llmNodeData'].inputVariables"
-                           :output-variables="data['llmNodeData'].outputVariables"
+    <node-variable-display :input-variables="data['imageUnderstandingNodeData'].inputVariables"
+                           :output-variables="data['imageUnderstandingNodeData'].outputVariables"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

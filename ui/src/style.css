@@ -34,6 +34,12 @@
 .vue-flow__node-keywordExtraction {
     width: 300px;
 }
+.vue-flow__node-questionOptimization {
+    width: 300px;
+}
+.vue-flow__node-imageUnderstanding {
+    width: 300px;
+}
 
 .vue-flow__handle {
     background: #8d8dff;

@@ -64,7 +64,7 @@ func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) 
 	var definition model.WorkflowDefinition
 	_ = json.Unmarshal([]byte(detail.Data), &definition)
 	idx := slices.IndexFunc(definition.Nodes, func(node *model.Node) bool {
-		return node.Type == string(model.NodeTypeStart)
+		return node.Type == model.NodeTypeStart
 	})
 	if idx == -1 {
 		return nil, errors.New("无效的流程定义")
@@ -89,6 +89,8 @@ func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.Nod
 		prototype = model.KeywordExtractionNodePrototype
 	case model.NodeTypeQuestionOptimization:
 		prototype = model.QuestionOptimizationNodePrototype
+	case model.NodeTypeImageUnderstanding:
+		prototype = model.ImageUnderstandingNodePrototype
 	default:
 		return "", errors.New("无效的节点类型")
 	}

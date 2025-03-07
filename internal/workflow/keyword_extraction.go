@@ -17,7 +17,7 @@ func (e *Engine) executeKeywordExtractionNode(ctx context.Context, node *model.N
 		panic("缺少question参数")
 	}
 	question := q.(string)
-	llm, err := e.llmRepo.GetDetail(ctx, nodeData.ModelId)
+	llm, err := e.modelRepo.GetDetail(ctx, nodeData.ModelId)
 	if err != nil {
 		panic(err)
 	}

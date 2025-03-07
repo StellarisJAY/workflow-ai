@@ -11,6 +11,7 @@ import {Background} from "@vue-flow/background";
 import nodeConstants from './nodeConstants.js';
 import TimeUtil from "../../util/timeUtil.js";
 import NodeStatusTag from "./node/nodeStatusTag.vue";
+import fsAPI from "../../api/fs.js";
 
 const props = defineProps(['workflowId']);
 const router = useRouter();
@@ -151,6 +152,7 @@ function nodeClickHandler(event) {
             <p>{{item}}</p>
           </CollapsePanel>
         </Collapse>
+        <img v-if="currentNodeOutputVarTypes[key]==='image_file'" alt="key" :src="fsAPI.fileSrc(value)"/>
       </CollapsePanel>
     </Collapse>
     <h4 v-if="currentNodeInstance['error']">错误信息</h4>

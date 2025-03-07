@@ -1,11 +1,12 @@
 <script setup>
-import {Input, List, ListItem, Button, Select, Cascader} from "ant-design-vue";
+import {Input, List, ListItem, Button, Select, Cascader, Upload} from "ant-design-vue";
 const props = defineProps(['inputVariables', 'outputVariables','nodeId', "nodeData", "node"]);
 import {DeleteFilled} from "@ant-design/icons-vue";
 import {onMounted, ref} from "vue";
 import NodeUtil from "../../../util/nodeUtil.js";
 
 const refOptions = ref([]);
+const fileList = ref([]);
 onMounted(()=>{
   refOptions.value = NodeUtil.getPrevNodesOutputs(props.nodeId);
   props.inputVariables.forEach(variable => {
@@ -66,6 +67,10 @@ function getValueOption(variable) {
 function onValueOptionChange(variable, ev) {
   variable['isRef'] = ev === 'ref';
 }
+
+function imageRefOptions(refOptions) {
+  return refOptions.filter(item=>item.type !== "image_file");
+}
 </script>
 
 <template>
@@ -87,7 +92,12 @@ function onValueOptionChange(variable, ev) {
                 size="small"
                 :disabled="variable['fixed']"/>
         <!--字符串-->
-        <Input v-model:value="variable['value']" size="small"/>
+        <Input v-if="variable.type !== 'image_file'" v-model:value="variable['value']" size="small"/>
+        <!--引用文件-->
+        <Cascader v-else size="small"
+                  v-model:value="variable['refOption']"
+                  :options="imageRefOptions(refOptions)"
+                  @change="ev=>onRefOptionChange(variable, ev)"/>
       </div>
 
       <!--引用-->

@@ -42,24 +42,27 @@ func (r *Router) Init() error {
 	}
 
 	store := fs.NewFileStore(r.conf)
-	llmRepo := repo.NewLLMRepo(repository)
+	llmRepo := repo.NewModelRepo(repository)
 	templateRepo := repo.NewTemplateRepo(repository)
 	instanceRepo := repo.NewInstanceRepo(repository)
 	kbRepo := repo.NewKnowledgeBaseRepo(repository)
+	fileRepo := repo.NewFileRepo(repository)
 	tm := repo.NewTransactionManager(repository)
 	vectorstoreFactory := vector.MakeFactory(*r.conf)
 	documentProcessor := rag.NewDocumentProcessor(8, kbRepo, store, llmRepo, vectorstoreFactory)
-	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor, r.conf)
+	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor, r.conf, fileRepo, store)
 
-	llmService := service.NewLLMService(llmRepo, snowflakeNode)
+	llmService := service.NewModelService(llmRepo, snowflakeNode)
 	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
 	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
 	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store, documentProcessor, vectorstoreFactory)
+	fileService := service.NewFileService(fileRepo, store, tm, snowflakeNode)
 
-	llmHandler := NewLLMHandler(llmService)
+	llmHandler := NewModelHandler(llmService)
 	templateHandler := NewTemplateHandler(templateService)
 	workflowHandler := NewWorkflowHandler(workflowService)
 	kbHandler := NewKnowledgeBaseHandler(kbService)
+	fileHandler := NewFSHandler(fileService)
 
 	r.e.Use(middleware.Recovery)
 	r.e.Use(cors.New(cors.Config{
@@ -75,11 +78,11 @@ func (r *Router) Init() error {
 		})
 		model := v1.Group("/model")
 		{
-			model.POST("/create", llmHandler.CreateLLM)
+			model.POST("/create", llmHandler.CreateModel)
 			model.DELETE("/delete", nil)
 			model.PUT("/update", nil)
-			model.GET("/detail/:id", llmHandler.GetLLMDetail)
-			model.GET("/list", llmHandler.ListLLM)
+			model.GET("/detail/:id", llmHandler.GetModelDetail)
+			model.GET("/list", llmHandler.ListModel)
 		}
 		template := v1.Group("/template")
 		{
@@ -114,6 +117,12 @@ func (r *Router) Init() error {
 			kb.POST("/similarity-search", kbHandler.SimilaritySearch)
 			kb.POST("/fulltext-search", kbHandler.FulltextSearch)
 			kb.GET("/chunks", kbHandler.ListChunks)
+		}
+		file := v1.Group("/fs")
+		{
+			file.POST("/upload", fileHandler.Upload)
+			file.POST("/upload-batch", fileHandler.BatchUpload)
+			file.GET("/download/:id", fileHandler.Download)
 		}
 	}
 	return nil

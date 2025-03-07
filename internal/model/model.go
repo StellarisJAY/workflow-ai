@@ -5,12 +5,13 @@ import (
 	"time"
 )
 
-type LLMType string
+type ModelType string
 
 const (
-	LLMTypeChat      LLMType = "chat"
-	LLMTypeEmbedding LLMType = "embedding"
-	LLMlTypeReason   LLMType = "reason"
+	ModelTypeChat               ModelType = "chat"                // 聊天
+	ModelTypeEmbedding          ModelType = "embedding"           // 嵌入
+	ModelTypeReason             ModelType = "reason"              // 推理
+	ModelTypeImageUnderstanding ModelType = "image_understanding" // 视觉语言
 )
 
 type ApiType string
@@ -20,7 +21,7 @@ const (
 	ApiTypeOllama ApiType = "ollama"
 )
 
-type LLM struct {
+type Model struct {
 	Id        int64     `json:"id,string" gorm:"primary_key;column:id;type:bigint"`
 	Name      string    `json:"name" biding:"required" gorm:"column:name;type:varchar(50);not null"`
 	ApiType   string    `json:"apiType" biding:"required" gorm:"column:api_type;type:varchar(16);not null"`
@@ -29,14 +30,14 @@ type LLM struct {
 	Code      string    `json:"code" biding:"required" gorm:"column:code;type:varchar(32);not null"`
 	AddUser   int64     `json:"addUser" gorm:"column:add_user;type:bigint;not null"`
 	AddTime   time.Time `json:"addTime" gorm:"column:add_time;type:datetime;not null"`
-	ModelType LLMType   `json:"modelType" biding:"required" gorm:"column:model_type;type:varchar(16);not null"`
+	ModelType ModelType `json:"modelType" biding:"required" gorm:"column:model_type;type:varchar(32);not null"`
 }
 
-func (LLM) TableName() string {
-	return "wf_llm"
+func (Model) TableName() string {
+	return "wf_model"
 }
 
-type LLMDetailDTO struct {
+type ModelDetailDTO struct {
 	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	ApiType     string    `json:"apiType"`
@@ -46,18 +47,18 @@ type LLMDetailDTO struct {
 	AddUser     int64     `json:"addUser"`
 	AddTime     time.Time `json:"addTime"`
 	AddUsername string    `json:"addUsername"`
-	ModelType   LLMType   `json:"modelType"`
+	ModelType   ModelType `json:"modelType"`
 }
 
-type LLMQuery struct {
-	Name      string  `json:"name" form:"name"`
-	ApiType   string  `json:"apiType" form:"apiType"`
-	Code      string  `json:"code" form:"code"`
-	ModelType LLMType `json:"modelType" form:"modelType"`
+type ModelQuery struct {
+	Name      string    `json:"name" form:"name"`
+	ApiType   string    `json:"apiType" form:"apiType"`
+	Code      string    `json:"code" form:"code"`
+	ModelType ModelType `json:"modelType" form:"modelType"`
 	common.PageQuery
 }
 
-type LLMListDTO struct {
+type ModelListDTO struct {
 	Id          int64     `json:"id,string"`
 	Name        string    `json:"name"`
 	ApiType     string    `json:"apiType"`
@@ -65,5 +66,5 @@ type LLMListDTO struct {
 	AddUser     int64     `json:"addUser"`
 	AddTime     time.Time `json:"addTime"`
 	AddUsername string    `json:"addUsername"`
-	ModelType   LLMType   `json:"modelType"`
+	ModelType   ModelType `json:"modelType"`
 }

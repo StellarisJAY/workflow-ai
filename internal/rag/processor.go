@@ -25,11 +25,11 @@ type DocumentProcessor struct {
 	workerCancel       []context.CancelFunc
 	taskChan           chan int64 // 任务队列 kbProcessTaskId
 	workers            int
-	llmRepo            *repo.LLMRepo
+	modelRepo          *repo.ModelRepo
 	vectorStoreFactory vector.Factory
 }
 
-func NewDocumentProcessor(workers int, kbRepo *repo.KnowledgeBaseRepo, fs fs.FileStore, llmRepo *repo.LLMRepo,
+func NewDocumentProcessor(workers int, kbRepo *repo.KnowledgeBaseRepo, fs fs.FileStore, modelRepo *repo.ModelRepo,
 	factory vector.Factory) *DocumentProcessor {
 	proc := &DocumentProcessor{
 		kbRepo:             kbRepo,
@@ -37,7 +37,7 @@ func NewDocumentProcessor(workers int, kbRepo *repo.KnowledgeBaseRepo, fs fs.Fil
 		taskChan:           make(chan int64, 100),
 		workers:            workers,
 		fs:                 fs,
-		llmRepo:            llmRepo,
+		modelRepo:          modelRepo,
 		vectorStoreFactory: factory,
 	}
 	for i := 0; i < workers; i++ {
@@ -58,7 +58,7 @@ func (d *DocumentProcessor) SimilaritySearch(ctx context.Context, kbId int64, in
 	if err != nil {
 		return nil, err
 	}
-	llm, err := d.llmRepo.GetDetail(ctx, kb.EmbeddingModel)
+	llm, err := d.modelRepo.GetDetail(ctx, kb.EmbeddingModel)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 
 // embedDocument 嵌入文档
 func (d *DocumentProcessor) embedDocument(ctx context.Context, kb *model.KnowledgeBaseDetailDTO, chunks []schema.Document) ([]string, error) {
-	llm, err := d.llmRepo.GetDetail(ctx, kb.EmbeddingModel)
+	llm, err := d.modelRepo.GetDetail(ctx, kb.EmbeddingModel)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (d *DocumentProcessor) handleTask(ctx context.Context, taskId int64) {
 	}
 }
 
-func makeEmbeddingModel(llm *model.LLMDetailDTO) (embeddings.EmbedderClient, error) {
+func makeEmbeddingModel(llm *model.ModelDetailDTO) (embeddings.EmbedderClient, error) {
 	var embeddingModel embeddings.EmbedderClient
 	var err error
 	switch llm.ApiType {

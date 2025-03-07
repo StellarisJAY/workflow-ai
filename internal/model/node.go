@@ -13,7 +13,7 @@ const (
 	NodeTypeKeywordExtraction    NodeType = "keywordExtraction"    // 关键词提取节点
 	NodeTypeWebSearch            NodeType = "webSearch"            // 搜索引擎节点
 	NodeTypeQuestionOptimization NodeType = "questionOptimization" // 问题优化节点
-	NodeTypeConcentrator         NodeType = "concentrator"         // 集线器节点
+	NodeTypeImageUnderstanding   NodeType = "imageUnderstanding"   // 图像理解节点
 )
 
 type VariableType string
@@ -36,8 +36,8 @@ const (
 )
 
 type Node struct {
-	Id       string `json:"id"`   // 节点ID
-	Type     string `json:"type"` // 节点类型
+	Id       string   `json:"id"`   // 节点ID
+	Type     NodeType `json:"type"` // 节点类型
 	Position struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
@@ -46,20 +46,22 @@ type Node struct {
 }
 
 type NodeData struct {
-	Name                          string                         `json:"name"`
-	AllowAddInputVar              bool                           `json:"allowAddInputVar"`              // 是否允许添加输入变量
-	AllowAddOutputVar             bool                           `json:"allowAddOutputVar"`             // 是否允许添加输出变量
-	DefaultAllowVarTypes          []VariableType                 `json:"defaultAllowVarTypes"`          // 默认允许的变量类型
-	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData"`                   // 大模型节点数据
-	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData"`    // 写入知识库节点数据
-	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData"` // 检索知识库节点数据
-	StartNodeData                 *StartNodeData                 `json:"startNodeData"`                 // 开始节点数据
-	EndNodeData                   *EndNodeData                   `json:"endNodeData"`                   // 结束节点数据
-	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData"`               // 爬虫节点数据
-	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData"`             // 条件判断节点数据
-	WebSearchNodeData             *WebSearchNodeData             `json:"webSearchNodeData"`             // 搜索引擎节点数据
-	KeywordExtractionNodeData     *KeywordExtractionNodeData     `json:"keywordExtractionNodeData"`     // 关键词提取节点数据
-	QuestionOptimizationNodeData  *QuestionOptimizationNodeData  `json:"questionOptimizationNodeData"`  // 问题优化节点数据
+	Name                 string         `json:"name"`
+	AllowAddInputVar     bool           `json:"allowAddInputVar"`     // 是否允许添加输入变量
+	AllowAddOutputVar    bool           `json:"allowAddOutputVar"`    // 是否允许添加输出变量
+	DefaultAllowVarTypes []VariableType `json:"defaultAllowVarTypes"` // 默认允许的变量类型
+
+	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData,omitempty"`                   // 大模型节点数据
+	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData,omitempty"`    // 写入知识库节点数据
+	RetrieveKnowledgeBaseNodeData *RetrieveKnowledgeBaseNodeData `json:"retrieveKnowledgeBaseNodeData,omitempty"` // 检索知识库节点数据
+	StartNodeData                 *StartNodeData                 `json:"startNodeData,omitempty"`                 // 开始节点数据
+	EndNodeData                   *EndNodeData                   `json:"endNodeData,omitempty"`                   // 结束节点数据
+	CrawlerNodeData               *CrawlerNodeData               `json:"crawlerNodeData,omitempty"`               // 爬虫节点数据
+	ConditionNodeData             *ConditionNodeData             `json:"conditionNodeData,omitempty"`             // 条件判断节点数据
+	WebSearchNodeData             *WebSearchNodeData             `json:"webSearchNodeData,omitempty"`             // 搜索引擎节点数据
+	KeywordExtractionNodeData     *KeywordExtractionNodeData     `json:"keywordExtractionNodeData,omitempty"`     // 关键词提取节点数据
+	QuestionOptimizationNodeData  *QuestionOptimizationNodeData  `json:"questionOptimizationNodeData,omitempty"`  // 问题优化节点数据
+	ImageUnderstandingNodeData    *ImageUnderstandingNodeData    `json:"imageUnderstandingNodeData,omitempty"`    // 图像理解节点数据
 }
 
 // LLMNodeData LLM节点数据
@@ -160,9 +162,18 @@ type QuestionOptimizationNodeData struct {
 	OutputVariables []*Variable `json:"outputVariables"`
 }
 
+type ImageUnderstandingNodeData struct {
+	ModelId         int64       `json:"modelId,string"`
+	ModelName       string      `json:"modelName"`
+	Prompt          string      `json:"prompt"`
+	OutputFormat    string      `json:"outputFormat"`
+	InputVariables  []*Variable `json:"inputVariables"`
+	OutputVariables []*Variable `json:"outputVariables"`
+}
+
 // ConditionNodePrototype 条件判断节点原型
 var ConditionNodePrototype = &Node{
-	Type: string(NodeTypeCondition),
+	Type: NodeTypeCondition,
 	Data: NodeData{
 		Name:                 "条件",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
@@ -189,7 +200,7 @@ var ConditionNodePrototype = &Node{
 
 // LLMNodePrototype 大模型节点原型
 var LLMNodePrototype = &Node{
-	Type: string(NodeTypeLLM),
+	Type: NodeTypeLLM,
 	Data: NodeData{
 		Name:                 "大模型",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
@@ -211,7 +222,7 @@ var LLMNodePrototype = &Node{
 }
 
 var KbRetrievalNodePrototype = &Node{
-	Type: string(NodeTypeKnowledgeRetrieval),
+	Type: NodeTypeKnowledgeRetrieval,
 	Data: NodeData{
 		Name:                 "知识库检索",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
@@ -234,7 +245,7 @@ var KbRetrievalNodePrototype = &Node{
 }
 
 var CrawlerNodePrototype = &Node{
-	Type: string(NodeTypeCrawler),
+	Type: NodeTypeCrawler,
 	Data: NodeData{
 		Name:                 "HTTP请求",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
@@ -256,7 +267,7 @@ var CrawlerNodePrototype = &Node{
 }
 
 var KeywordExtractionNodePrototype = &Node{
-	Type: string(NodeTypeKeywordExtraction),
+	Type: NodeTypeKeywordExtraction,
 	Data: NodeData{
 		Name:                 "关键词提取",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
@@ -278,7 +289,7 @@ var KeywordExtractionNodePrototype = &Node{
 }
 
 var QuestionOptimizationNodePrototype = &Node{
-	Type: string(NodeTypeQuestionOptimization),
+	Type: NodeTypeQuestionOptimization,
 	Data: NodeData{
 		Name:                 "问题优化",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
@@ -298,7 +309,7 @@ var QuestionOptimizationNodePrototype = &Node{
 }
 
 var WebSearchNodePrototype = &Node{
-	Type: string(NodeTypeWebSearch),
+	Type: NodeTypeWebSearch,
 	Data: NodeData{
 		Name:                 "网页搜索",
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
@@ -314,6 +325,26 @@ var WebSearchNodePrototype = &Node{
 				{Name: "urls", Type: VariableTypeStringArray, Required: true, Fixed: true},     // 搜索到的网页url列表
 				{Name: "contents", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 搜索到网页内容列表
 			},
+		},
+	},
+}
+
+var ImageUnderstandingNodePrototype = &Node{
+	Type: NodeTypeImageUnderstanding,
+	Data: NodeData{
+		Name:                 "图像理解",
+		DefaultAllowVarTypes: []VariableType{VariableTypeString},
+		AllowAddInputVar:     false,
+		AllowAddOutputVar:    true,
+		ImageUnderstandingNodeData: &ImageUnderstandingNodeData{
+			ModelId:      0,
+			ModelName:    "",
+			Prompt:       "",
+			OutputFormat: "JSON",
+			InputVariables: []*Variable{
+				{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true, AllowRef: true, IsRef: true},
+			},
+			OutputVariables: []*Variable{},
 		},
 	},
 }

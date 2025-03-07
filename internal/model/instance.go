@@ -68,7 +68,7 @@ func (WorkflowInstance) TableName() string {
 type NodeInstance struct {
 	Id           int64              `json:"id" gorm:"primary_key;column:id;type:bigint"`
 	WorkflowId   int64              `json:"workflowId" gorm:"column:workflow_id;type:bigint;not null"`
-	Type         string             `json:"type" gorm:"column:type;type:varchar(32);not null"`
+	Type         NodeType           `json:"type" gorm:"column:type;type:varchar(32);not null"`
 	NodeId       string             `json:"nodeId" gorm:"column:node_id;type:varchar(64);not null"`
 	AddTime      time.Time          `json:"addTime" gorm:"column:add_time;type:datetime;not null"`
 	CompleteTime time.Time          `json:"completeTime" gorm:"column:complete_time;type:datetime;not null"`
@@ -128,7 +128,7 @@ type NodeStatusDTO struct {
 type NodeInstanceDetailDTO struct {
 	Id                  int64                   `json:"id"`
 	WorkflowId          int64                   `json:"workflowId"`
-	Type                string                  `json:"type"`
+	Type                NodeType                `json:"type"`
 	NodeId              string                  `json:"nodeId"`
 	AddTime             time.Time               `json:"addTime"`
 	CompleteTime        time.Time               `json:"completeTime"`

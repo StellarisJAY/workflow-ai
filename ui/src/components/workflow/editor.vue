@@ -17,6 +17,7 @@ import NodeConstants from "./nodeConstants.js";
 import WebSearchSetting from "./setting/WebSearchSetting.vue";
 import KeywordExtractionSetting from "./setting/KeywordExtractionSetting.vue";
 import QuestionOptimizationSetting from "./setting/QuestionOptimizationSetting.vue";
+import ImageUnderstandingSetting from "./setting/ImageUnderstandingSetting.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -42,7 +43,7 @@ if (props.isNewTemplate) {
       position: { x: 100, y: 100 },
       data: {
         name: "开始",
-        defaultAllowVarTypes: ["string", "number"],
+        defaultAllowVarTypes: ["string", "number", "image_file"],
         allowAddInputVar: true,
         startNodeData: {
           inputVariables: [
@@ -88,6 +89,7 @@ const conditionDrawerOpen = ref(false);
 const webSearchDrawerOpen = ref(false);
 const keywordExtractionDrawerOpen = ref(false);
 const questionOptimizationDrawerOpen = ref(false);
+const imageUnderstandingDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
 
@@ -106,6 +108,7 @@ onNodeClick(event => {
     case "webSearch": webSearchDrawerOpen.value = true; break;
     case "keywordExtraction": keywordExtractionDrawerOpen.value = true; break;
     case "questionOptimization": questionOptimizationDrawerOpen.value = true; break;
+    case "imageUnderstanding": imageUnderstandingDrawerOpen.value = true; break;
 	}
 });
 // 节点连线事件，添加edge
@@ -306,6 +309,13 @@ function updateTemplate() {
           @close="_=>{questionOptimizationDrawerOpen = false;}"
           :destroy-on-close="true">
     <QuestionOptimizationSetting :node="currentSettingNodes['questionOptimization']"/>
+  </Drawer>
+
+  <Drawer title="图像理解设置" size="large"
+          :open="imageUnderstandingDrawerOpen"
+          @close="_=>{imageUnderstandingDrawerOpen = false;}"
+          :destroy-on-close="true">
+    <ImageUnderstandingSetting :node="currentSettingNodes['imageUnderstanding']"/>
   </Drawer>
 </template>
 
