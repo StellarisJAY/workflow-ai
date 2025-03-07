@@ -40,7 +40,7 @@ func (e *Engine) executeImageUnderstandingNode(ctx context.Context, node *model.
 		for _, variable := range nodeData.OutputVariables {
 			if variable.Type == model.VariableTypeString {
 				out := map[string]string{
-					"output": output,
+					variable.Name: output,
 				}
 				data, _ := json.Marshal(out)
 				output = string(data)

@@ -145,6 +145,7 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			nodeInstance.Status = model.NodeInstanceStatusFailed
 			nodeInstance.CompleteTime = time.Now()
 			nodeInstance.Error = err.Error()
+			nodeInstance.Output = "{}"
 			if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
 				log.Println("update node instance failed", err)
 			}

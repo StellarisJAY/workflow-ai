@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
@@ -52,7 +53,11 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 		// 文本格式输出，需要转换成与输出变量表对于的JSON格式
 		for _, variable := range llmNodeData.OutputVariables {
 			if variable.Type == model.VariableTypeString {
-				output = fmt.Sprintf("{\"%s\":\"%s\"}", variable.Name, output)
+				out := map[string]string{
+					variable.Name: output,
+				}
+				data, _ := json.Marshal(out)
+				output = string(data)
 				break
 			}
 		}
