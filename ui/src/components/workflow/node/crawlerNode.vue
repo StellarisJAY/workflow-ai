@@ -36,8 +36,8 @@ function onEdgeDelete(ev) {
     <template #extra>
       <node-extra :id="id" :type="type" :data="data" :status="node.status" :editable="true"/>
     </template>
-    <node-variable-display :input-variables="data['crawlerNodeData'].inputVariables"
-                           :output-variables="data['crawlerNodeData'].outputVariables"
+    <node-variable-display :input-variables="data['input']"
+                           :output-variables="data['output']"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

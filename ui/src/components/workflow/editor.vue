@@ -46,26 +46,12 @@ if (props.isNewTemplate) {
         name: "开始",
         defaultAllowVarTypes: ["string", "number", "image_file"],
         allowAddInputVar: true,
+        input: [{name: "value", type: "string", value: {type: "literal", content: ""}}],
+        output: [],
         startNodeData: {
-          inputVariables: [
-            {name: "input", type: "string", value: "", allowRef: false, isRef: false}
-          ]
         }
       }
     },
-    {
-      id: "end",
-      type: "end",
-      defaultAllowVarTypes: ["string", "number"],
-      position: { x: 200, y: 100 },
-      data: {
-        name: "结束",
-        endNodeData: {
-          outputVariables: [
-          ]
-        },
-      }
-    }
   ];
 } else if (props.template['data']) {
   const definition = JSON.parse(props.template['data']);

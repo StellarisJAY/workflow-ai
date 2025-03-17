@@ -36,19 +36,11 @@ func (e *Engine) executeImageUnderstandingNode(ctx context.Context, node *model.
 		output = strings.TrimPrefix(output, "```json")
 		output = strings.TrimSuffix(output, "```")
 		output = strings.TrimSpace(output)
-	} else {
-		for _, variable := range nodeData.OutputVariables {
-			if variable.Type == model.VariableTypeString {
-				out := map[string]string{
-					variable.Name: output,
-				}
-				data, _ := json.Marshal(out)
-				output = string(data)
-				break
-			}
-		}
 	}
-	nodeInstance.Output = output
+	outputMap := make(map[string]any)
+	outputMap["text"] = output
+	outData, _ := json.Marshal(outputMap)
+	nodeInstance.Output = string(outData)
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	nodeInstance.CompleteTime = time.Now()
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {

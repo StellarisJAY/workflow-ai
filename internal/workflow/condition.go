@@ -96,6 +96,8 @@ func (e *Engine) evaluateConditions(ctx context.Context, conditions []*model.Con
 			success, err = compareString(condition.Op, value1, value2)
 		case model.VariableTypeNumber:
 			success, err = compareNumber(condition.Op, value1, value2)
+		case model.VariableTypeStringArray, model.VariableTypeNumberArray:
+			success, err = compareArray(condition.Op, value1, value1Type)
 		default:
 			return false, fmt.Errorf("value type not supported: %s", value1Type)
 		}
@@ -112,18 +114,15 @@ func (e *Engine) evaluateConditions(ctx context.Context, conditions []*model.Con
 	return isAnd, nil
 }
 
-func (e *Engine) getConditionVariableValue(ctx context.Context, variable *model.Variable, workflowId int64,
+func (e *Engine) getConditionVariableValue(ctx context.Context, variable *model.Input, workflowId int64,
 	definition *model.WorkflowDefinition) (string,
 	model.VariableType, error) {
 	varType := variable.Type
-	if !variable.IsRef {
-		return variable.Value, varType, nil
+	if variable.Value.Type == model.VarValueTypeLiteral {
+		return variable.Value.Content, varType, nil
 	}
-	parts := strings.Split(variable.Ref, ".")
-	if len(parts) != 2 {
-		return "", varType, errors.New("invalid condition variable")
-	}
-	nodeId, varName := parts[0], parts[1]
+
+	nodeId, varName := variable.Value.SourceNode, variable.Value.SourceName
 	value, err := e.instanceRepo.GetOutputVariableFromNodeInstance(ctx, nodeId, workflowId, varName)
 	if err != nil {
 		return "", varType, err
@@ -167,14 +166,29 @@ func compareString(op string, value1, value2 string) (bool, error) {
 		return value1 == value2, nil
 	case "!=":
 		return value1 != value2, nil
-	case ">":
-		return value1 > value2, nil
-	case "<":
-		return value1 < value2, nil
-	case ">=":
-		return value1 >= value2, nil
-	case "<=":
-		return value1 <= value2, nil
+	case "contains":
+		return strings.Contains(value1, value2), nil
+	case "!contains":
+		return !strings.Contains(value1, value2), nil
+	case "empty":
+		return len(value1) == 0, nil
+	case "!empty":
+		return len(value1) != 0, nil
+	default:
+		return false, errors.New("invalid operator")
+	}
+}
+
+func compareArray(op string, value1 string, valType model.VariableType) (bool, error) {
+	var array []any
+	if err := json.Unmarshal([]byte(value1), &array); err != nil {
+		return false, errors.New("invalid array")
+	}
+	switch op {
+	case "empty":
+		return len(array) == 0, nil
+	case "!empty":
+		return len(array) != 0, nil
 	default:
 		return false, errors.New("invalid operator")
 	}

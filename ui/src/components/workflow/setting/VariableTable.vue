@@ -1,34 +1,42 @@
 <script setup>
-import {Input, List, ListItem, Button, Select, Cascader, Upload} from "ant-design-vue";
+import {Input, List, ListItem, Button, Select, Cascader} from "ant-design-vue";
 const props = defineProps(['inputVariables', 'outputVariables','nodeId', "nodeData", "node"]);
 import {DeleteFilled} from "@ant-design/icons-vue";
 import {onMounted, ref} from "vue";
 import NodeUtil from "../../../util/nodeUtil.js";
 
 const refOptions = ref([]);
-const fileList = ref([]);
+
 onMounted(()=>{
   refOptions.value = NodeUtil.getPrevNodesOutputs(props.nodeId);
+  if (!props.inputVariables) return;
   props.inputVariables.forEach(variable => {
-    if (variable.ref) {
-      variable['refOption'] = variable['ref'].split('.');
+    if (variable.value.type === "ref") {
+      variable['refOption'] = [variable.value.sourceNode, variable.value.sourceName];
     }
   });
 });
 
 function onRefOptionChange(variable, ev) {
-  variable['ref'] = ev[0] + "." + ev[1];
+  variable.value['sourceNode'] = ev[0];
+  variable.value['sourceName'] = ev[1];
+  // 引用发生变化，将当前变量类型改为被引用变量类型
+  const srcNode = refOptions.value.find(option=>option.value === ev[0]);
+  if (srcNode) {
+    const srcVar = srcNode.children.find(child=>child.label === ev[1]);
+    if (srcVar) {
+      variable.type = srcVar.type;
+    }
+  }
 }
 
 function addVariable(target) {
-  let allowRef = true;
-  const nodeType = props.node.type;
-  if (nodeType === 'start') allowRef = false;
-  target.push({name: "variable", value: "", type: "string", allowRef: allowRef});
-}
-
-function addOutputVariable(target) {
-  target.push({name: "variable", value: "", type: "string", allowRef: false});
+  target.push({name: "variable", type: "string", value: {
+      type: "ref",
+      content: "",
+      sourceNode: "",
+      sourceName: "",
+    }});
 }
 
 function removeVariable(target, name) {
@@ -51,61 +59,25 @@ function getTypeOptions(variable) {
   });
   return typeOptions;
 }
-
-function getValueOptions(variable) {
-  const options = [{label: "值", value: "value"}];
-  if (variable['allowRef']) {
-    options.push({label: "引用", value: "ref"});
-  }
-  return options;
-}
-
-function getValueOption(variable) {
-  return variable['isRef'] ? "ref":"value";
-}
-
-function onValueOptionChange(variable, ev) {
-  variable['isRef'] = ev === 'ref';
-}
-
-function imageRefOptions(refOptions) {
-  return refOptions.filter(item=>item.type !== "image_file");
-}
 </script>
 
 <template>
-  <h4>输入变量</h4>
+  <h4 v-if="inputVariables">输入变量</h4>
   <List>
     <ListItem v-for="variable in inputVariables">
       <Input v-model:value="variable.name"
              size="small"
              placeholder="变量名"
              :disabled="variable['required']"/>
-      <!--值选择-->
-      <Select :value="getValueOption(variable)" size="small"
-              :options="getValueOptions(variable)"
-              @change="ev=>onValueOptionChange(variable, ev)"/>
-      <div v-if="!variable.isRef">
-        <!--类型选择-->
-        <Select v-model:value="variable.type"
-                :options="getTypeOptions(variable)"
-                size="small"
-                :disabled="variable['fixed']"/>
-        <!--字符串-->
-        <Input v-if="variable.type !== 'image_file'" v-model:value="variable['value']" size="small"/>
-        <!--引用文件-->
-        <Cascader v-else size="small"
-                  v-model:value="variable['refOption']"
-                  :options="imageRefOptions(refOptions)"
-                  @change="ev=>onRefOptionChange(variable, ev)"/>
-      </div>
-
       <!--引用-->
-      <Cascader v-else size="small"
+      <Cascader v-if="node.type !== 'start'" size="small"
                 v-model:value="variable['refOption']"
                 :options="refOptions"
                 @change="ev=>onRefOptionChange(variable, ev)"/>
-
+      <Select v-else v-model:value="variable.type"
+              :options="getTypeOptions(variable)"
+              size="small"
+              :disabled="variable['fixed']"/>
       <Button size="small"
               v-if="!variable['required'] && !variable['fixed']"
               @click="removeVariable(inputVariables, variable.name)"><DeleteFilled/></Button>
@@ -116,24 +88,16 @@ function imageRefOptions(refOptions) {
               size="mini">添加</Button>
     </ListItem>
   </List>
-  <h4>输出变量</h4>
+  <h4 v-if="outputVariables">输出变量</h4>
   <List>
     <ListItem v-for="variable in outputVariables">
       <Input v-model:value="variable.name"
              size="small" placeholder="变量名"
-             :disabled="variable['required']"/>
+             :disabled="true"/>
       <Select v-model:value="variable.type"
               :options="getTypeOptions(variable)"
               size="small"
-              :disabled="variable['fixed']"/>
-      <Button size="small"
-              @click="removeVariable(outputVariables, variable.name)"
-              v-if="!variable['required']&&!variable['fixed']"><DeleteFilled/></Button>
-    </ListItem>
-    <ListItem>
-      <Button @click="addOutputVariable(outputVariables)"
-              size="mini"
-              v-if="nodeData['allowAddOutputVar']">添加</Button>
+              :disabled="true"/>
     </ListItem>
   </List>
 </template>

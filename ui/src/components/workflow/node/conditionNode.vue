@@ -17,15 +17,12 @@ onMounted(()=>{
 });
 
 function opValueToHumanReadable(variable) {
-  if (variable.isRef) {
-    const parts = variable['ref'].split('.');
-    if (parts.length > 1) {
-      const node = findNode(parts[0]);
-      if (node) return node.data['name'] + "/" + parts[1];
-      else return "";
-    }
+  if (variable.value.type === "literal") {
+    return variable.value.content;
   }
-  return variable.value;
+  const node = findNode(variable.value.sourceNode);
+  if (node) return node.data['name'] + "/" + variable.value.sourceName;
+  return "";
 }
 
 function onNodeDelete(ev) {

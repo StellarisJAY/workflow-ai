@@ -13,7 +13,6 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"log"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -61,10 +60,10 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 		return 0, fmt.Errorf("invalid start node")
 	}
 	// 检查输入变量是否全部存在
-	inputVariables := startNodeData.InputVariables
+	inputVariables := startNode.Data.Input
 	for _, variable := range inputVariables {
-		if _, ok := input[variable.Name]; !ok {
-			return 0, fmt.Errorf("missing input variable: %s", variable.Name)
+		if _, ok := input[variable.Name]; !ok && variable.Required {
+			return 0, fmt.Errorf("缺少必填变量: %s", variable.Name)
 		}
 	}
 	instance := &model.WorkflowInstance{
@@ -106,33 +105,29 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	return instance.Id, nil
 }
 
-func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []*model.Variable, workflowId int64) (map[string]any, error) {
+func (e *Engine) LookupInputVariables(ctx context.Context, variableDef []model.Input, workflowId int64) (map[string]any, error) {
 	result := make(map[string]any)
 	nodeInstancesCache := make(map[string]*model.NodeInstance)
 	for _, variable := range variableDef {
-		if variable.IsRef {
-			parts := strings.Split(variable.Ref, ".")
-			if len(parts) != 2 {
-				return nil, errors.New("变量来源格式错误")
-			}
-			originNodeId, originVarName := parts[0], parts[1]
-			var originNodeInstance *model.NodeInstance
-			if n, ok := nodeInstancesCache[originNodeId]; ok {
-				originNodeInstance = n
-			} else {
-				originNodeInstance, _ = e.instanceRepo.GetNodeInstanceByNodeId(ctx, workflowId, originNodeId)
-				if originNodeInstance == nil {
-					continue
-				}
-				nodeInstancesCache[originNodeId] = originNodeInstance
-			}
-			var inputMap map[string]any
-			_ = json.Unmarshal([]byte(originNodeInstance.Output), &inputMap)
-			if value, ok := inputMap[originVarName]; ok {
-				result[variable.Name] = value
-			}
+		if variable.Value.Type == model.VarValueTypeLiteral {
+			result[variable.Name] = variable.Value.Content
+			continue
+		}
+		originNodeId, originVarName := variable.Value.SourceNode, variable.Value.SourceName
+		var originNodeInstance *model.NodeInstance
+		if n, ok := nodeInstancesCache[originNodeId]; ok {
+			originNodeInstance = n
 		} else {
-			result[variable.Name] = variable.Value
+			originNodeInstance, _ = e.instanceRepo.GetNodeInstanceByNodeId(ctx, workflowId, originNodeId)
+			if originNodeInstance == nil {
+				continue
+			}
+			nodeInstancesCache[originNodeId] = originNodeInstance
+		}
+		var inputMap map[string]any
+		_ = json.Unmarshal([]byte(originNodeInstance.Output), &inputMap)
+		if value, ok := inputMap[originVarName]; ok {
+			result[variable.Name] = value
 		}
 	}
 	return result, nil
@@ -152,15 +147,15 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			e.UpdateWorkflowFailed(ctx, nodeInstance.WorkflowId)
 		}
 	}()
+	inputMap, err := e.LookupInputVariables(ctx, node.Data.Input, nodeInstance.WorkflowId)
+	if err != nil {
+		panic(err)
+	}
 	switch node.Type {
 	case model.NodeTypeLLM:
 		llmNodeData := node.Data.LLMNodeData
 		if llmNodeData == nil {
 			panic(errors.New("invalid Model node data"))
-		}
-		inputMap, err := e.LookupInputVariables(ctx, llmNodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
 		}
 		e.executeLLMNode(context.TODO(), node, nodeInstance, llmNodeData, inputMap)
 	case model.NodeTypeEnd:
@@ -168,15 +163,11 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		if endNodeData == nil {
 			panic(errors.New("invalid end node data"))
 		}
-		e.executeEndNode(context.TODO(), node, nodeInstance, endNodeData)
+		e.executeEndNode(context.TODO(), node, nodeInstance)
 	case model.NodeTypeCrawler:
 		crawlerNodeData := node.Data.CrawlerNodeData
 		if crawlerNodeData == nil {
 			panic(errors.New("invalid crawler node data"))
-		}
-		inputMap, err := e.LookupInputVariables(ctx, crawlerNodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
 		}
 		e.executeCrawlerNode(context.TODO(), node, nodeInstance, crawlerNodeData, inputMap)
 	case model.NodeTypeCondition:
@@ -198,19 +189,11 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		if webSearchNodeData == nil {
 			panic(errors.New("invalid webSearch Node Data"))
 		}
-		inputMap, err := e.LookupInputVariables(ctx, webSearchNodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
-		}
 		e.executeWebSearchNode(context.TODO(), node, nodeInstance, webSearchNodeData, inputMap)
 	case model.NodeTypeKeywordExtraction:
 		keywordExtractionNodeData := node.Data.KeywordExtractionNodeData
 		if keywordExtractionNodeData == nil {
 			panic(errors.New("invalid keyword extraction node data"))
-		}
-		inputMap, err := e.LookupInputVariables(ctx, keywordExtractionNodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
 		}
 		e.executeKeywordExtractionNode(context.TODO(), node, nodeInstance, keywordExtractionNodeData, inputMap)
 	case model.NodeTypeQuestionOptimization:
@@ -218,29 +201,17 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		if llmTaskNodeData == nil {
 			panic(errors.New("invalid llm task node data"))
 		}
-		inputMap, err := e.LookupInputVariables(ctx, llmTaskNodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
-		}
 		e.executeQuestionOptimizeNode(context.TODO(), node, nodeInstance, llmTaskNodeData, inputMap)
 	case model.NodeTypeImageUnderstanding:
 		nodeData := node.Data.ImageUnderstandingNodeData
 		if nodeData == nil {
 			panic(errors.New("invalid image understanding node data"))
 		}
-		inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
-		}
 		e.executeImageUnderstandingNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	case model.NodeTypeOCR:
 		nodeData := node.Data.OCRNodeData
 		if nodeData == nil {
 			panic(errors.New("invalid ocr node data"))
-		}
-		inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
-		if err != nil {
-			panic(err)
 		}
 		e.executeOCRNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	}
@@ -328,15 +299,14 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 	}
 }
 
-func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
-	endNodeData *model.EndNodeData) {
-	outputVars := endNodeData.OutputVariables
-	outputMap, err := e.LookupInputVariables(ctx, outputVars, nodeInstance.WorkflowId)
+func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance) {
+	// 结束节点的输出与输入相同
+	inputMap, err := e.LookupInputVariables(ctx, node.Data.Input, nodeInstance.WorkflowId)
 	if err != nil {
-		panic(errors.New("无法获取output所需的变量"))
+		panic(err)
 	}
-	outputs, _ := json.Marshal(outputMap)
-	nodeInstance.Output = string(outputs)
+	outputData, _ := json.Marshal(inputMap)
+	nodeInstance.Output = string(outputData)
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {

@@ -57,42 +57,30 @@ func FindNodeById(definition *model.WorkflowDefinition, id string) *model.Node {
 	return definition.Nodes[idx]
 }
 
-func FindNodeOutputVariable(node *model.Node, varName string) *model.Variable {
+func FindNodeOutputVariable(node *model.Node, varName string) *model.Output {
 	outputVars := GetNodeOutputVariables(node)
-	idx := slices.IndexFunc(outputVars, func(variable *model.Variable) bool {
-		return variable.Name == varName
+	idx := slices.IndexFunc(outputVars, func(output model.Output) bool {
+		return output.Name == varName
 	})
 	if idx == -1 {
 		return nil
 	}
-	return outputVars[idx]
+	return &outputVars[idx]
 }
 
-func GetNodeOutputVariables(node *model.Node) []*model.Variable {
-	var outputVars []*model.Variable
-	switch node.Type {
-	case model.NodeTypeStart:
-		outputVars = node.Data.StartNodeData.InputVariables
-	case model.NodeTypeLLM:
-		outputVars = node.Data.LLMNodeData.OutputVariables
-	case model.NodeTypeCrawler:
-		outputVars = node.Data.CrawlerNodeData.OutputVariables
-	case model.NodeTypeEnd:
-		outputVars = node.Data.EndNodeData.OutputVariables
-	case model.NodeTypeKnowledgeRetrieval:
-		outputVars = node.Data.RetrieveKnowledgeBaseNodeData.OutputVariables
-	case model.NodeTypeWebSearch:
-		outputVars = node.Data.WebSearchNodeData.OutputVariables
-	case model.NodeTypeKeywordExtraction:
-		outputVars = node.Data.KeywordExtractionNodeData.OutputVariables
-	case model.NodeTypeQuestionOptimization:
-		outputVars = node.Data.QuestionOptimizationNodeData.OutputVariables
-	case model.NodeTypeImageUnderstanding:
-		outputVars = node.Data.ImageUnderstandingNodeData.OutputVariables
-	case model.NodeTypeOCR:
-		outputVars = node.Data.OCRNodeData.OutputVariables
+func GetNodeOutputVariables(node *model.Node) []model.Output {
+	// 开始和结束节点的输入输出变量列表相同
+	if node.Type == model.NodeTypeStart || node.Type == model.NodeTypeEnd {
+		outputs := make([]model.Output, len(node.Data.Input))
+		for i, input := range node.Data.Input {
+			outputs[i] = model.Output{
+				Name: input.Name,
+				Type: input.Type,
+			}
+		}
+		return outputs
 	}
-	return outputVars
+	return node.Data.Output
 }
 
 func GetPassedEdges(definition *model.WorkflowDefinition, nodes []*model.NodeStatusDTO,

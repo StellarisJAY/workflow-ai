@@ -34,8 +34,8 @@ function onModelChange(modelId) {
     <Select v-model:value="node.data['ocrNodeData']['modelId']" :options="llmOptions" @change="onModelChange"></Select>
   </FormItem>
   <VariableTable :node-id="node.id"
-                 :input-variables="node.data['ocrNodeData'].inputVariables"
-                 :output-variables="node.data['ocrNodeData'].outputVariables"
+                 :input-variables="node.data['input']"
+                 :output-variables="node.data['output']"
                  :node-data="node.data"
                  :node="node"/>
 </template>

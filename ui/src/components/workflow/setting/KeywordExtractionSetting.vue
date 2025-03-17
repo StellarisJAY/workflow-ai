@@ -37,10 +37,10 @@ function onModelChange(modelId) {
             @change="onModelChange"></Select>
   </FormItem>
   <VariableTable :node-id="node.id"
+                 :input-variables="node.data['input']"
+                 :output-variables="node.data['output']"
                  :node-data="node.data"
-                 :node="node"
-                 :input-variables="node.data['keywordExtractionNodeData'].inputVariables"
-                 :output-variables="node.data['keywordExtractionNodeData'].outputVariables"/>
+                 :node="node"/>
 </template>
 
 <style scoped></style>

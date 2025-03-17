@@ -53,7 +53,7 @@ func (t *TemplateService) Update(ctx context.Context, template *model.Template) 
 	return t.repo.Update(ctx, template)
 }
 
-func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) ([]*model.Variable, error) {
+func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) ([]model.Input, error) {
 	detail, err := t.repo.GetDetail(ctx, id)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (t *TemplateService) GetStartInputVariables(ctx context.Context, id int64) 
 	if idx == -1 {
 		return nil, errors.New("无效的流程定义")
 	}
-	return definition.Nodes[idx].Data.StartNodeData.InputVariables, nil
+	return definition.Nodes[idx].Data.Input, nil
 }
 
 func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.NodeType) (string, error) {
@@ -93,6 +93,8 @@ func (t *TemplateService) GetNodePrototype(_ context.Context, nodeType model.Nod
 		prototype = model.ImageUnderstandingNodePrototype
 	case model.NodeTypeOCR:
 		prototype = model.OCRNodePrototype
+	case model.NodeTypeEnd:
+		prototype = model.EndNodePrototype
 	default:
 		return "", errors.New("无效的节点类型")
 	}

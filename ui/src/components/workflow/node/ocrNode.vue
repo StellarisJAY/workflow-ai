@@ -39,8 +39,9 @@ function onEdgeDelete(ev) {
     <FormItem label="模型">
       {{data['ocrNodeData']['modelName']}}
     </FormItem>
-    <node-variable-display :input-variables="data['ocrNodeData'].inputVariables"
-                           :output-variables="data['ocrNodeData'].outputVariables"
+
+    <node-variable-display :input-variables="data['input']"
+                           :output-variables="data['output']"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

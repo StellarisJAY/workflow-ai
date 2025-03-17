@@ -12,10 +12,10 @@ defineProps(['node']);
     <InputNumber :min="1" :step="1" v-model:value="node.data['webSearchNodeData']['topN']"/>
   </FormItem>
   <VariableTable :node-id="node.id"
+                 :input-variables="node.data['input']"
+                 :output-variables="node.data['output']"
                  :node-data="node.data"
-                 :node="node"
-                 :input-variables="node.data['webSearchNodeData'].inputVariables"
-                 :output-variables="node.data['webSearchNodeData'].outputVariables"/>
+                 :node="node"/>
 </template>
 
 <style scoped></style>

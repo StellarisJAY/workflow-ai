@@ -37,8 +37,9 @@ function onEdgeDelete(ev) {
     <template #extra>
       <node-extra :id="id" :type="type" :data="data" :status="node.status" :editable="true"/>
     </template>
-    <node-variable-display :input-variables="data['retrieveKnowledgeBaseNodeData'].inputVariables"
-                           :output-variables="data['retrieveKnowledgeBaseNodeData'].outputVariables"
+
+    <node-variable-display :input-variables="data['input']"
+                           :output-variables="data['output']"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

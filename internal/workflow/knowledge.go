@@ -11,7 +11,7 @@ import (
 
 func (e *Engine) executeKnowledgeRetrieveNode(ctx context.Context, node *model.Node,
 	nodeData *model.RetrieveKnowledgeBaseNodeData, nodeInstance *model.NodeInstance) {
-	inputMap, err := e.LookupInputVariables(ctx, nodeData.InputVariables, nodeInstance.WorkflowId)
+	inputMap, err := e.LookupInputVariables(ctx, node.Data.Input, nodeInstance.WorkflowId)
 	if err != nil {
 		panic(err)
 	}

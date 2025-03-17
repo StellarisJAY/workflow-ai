@@ -46,11 +46,42 @@ type Node struct {
 	Data NodeData `json:"data"`
 }
 
+type VarValueType string
+
+const (
+	VarValueTypeLiteral VarValueType = "literal" // 字面量
+	VarValueTypeRef     VarValueType = "ref"     // 引用
+)
+
+type Value struct {
+	Type       VarValueType `json:"type"`
+	Content    string       `json:"content"`
+	SourceNode string       `json:"sourceNode"`
+	SourceName string       `json:"sourceName"`
+}
+
+type Input struct {
+	Name     string       `json:"name"`
+	Type     VariableType `json:"type"`
+	Value    Value        `json:"value"`
+	Required bool         `json:"required"`
+	Fixed    bool         `json:"fixed"`
+}
+
+type Output struct {
+	Name  string       `json:"name"`
+	Type  VariableType `json:"type"`
+	Value any          `json:"value"`
+}
+
 type NodeData struct {
 	Name                 string         `json:"name"`
 	AllowAddInputVar     bool           `json:"allowAddInputVar"`     // 是否允许添加输入变量
 	AllowAddOutputVar    bool           `json:"allowAddOutputVar"`    // 是否允许添加输出变量
 	DefaultAllowVarTypes []VariableType `json:"defaultAllowVarTypes"` // 默认允许的变量类型
+
+	Input  []Input  `json:"input"`  // 节点输入变量列表
+	Output []Output `json:"output"` // 节点输出变量列表
 
 	LLMNodeData                   *LLMNodeData                   `json:"llmNodeData,omitempty"`                   // 大模型节点数据
 	KnowledgeBaseWriteNodeData    *KnowledgeBaseWriteNodeData    `json:"knowledgeBaseWriteNodeData,omitempty"`    // 写入知识库节点数据
@@ -68,14 +99,14 @@ type NodeData struct {
 
 // LLMNodeData LLM节点数据
 type LLMNodeData struct {
-	ModelName       string      `json:"modelName"`       // 模型名称
-	ModelId         int64       `json:"modelId,string"`  // 模型ID
-	Prompt          string      `json:"prompt"`          // 提示词
-	InputVariables  []*Variable `json:"inputVariables"`  // 输入变量列表, key:变量名，value：变量来源{{nodeId.xxx}}或空(运行时输入)
-	OutputFormat    string      `json:"outputFormat"`    // 输出格式 text,markdown,json
-	OutputVariables []*Variable `json:"outputVariables"` // 输出变量名列表
-	Temperature     float64     `json:"temperature"`     // 温度 0~2
-	TopP            float64     `json:"topP"`            // TopP 0~1
+	ModelName    string  `json:"modelName"`      // 模型名称
+	ModelId      int64   `json:"modelId,string"` // 模型ID
+	Prompt       string  `json:"prompt"`         // 提示词
+	SystemPrompt string  `json:"systemPrompt"`   // 系统提示词
+	UserPrompt   string  `json:"userPrompt"`     // 用户提示词
+	OutputFormat string  `json:"outputFormat"`   // 输出格式 text,markdown,json
+	Temperature  float64 `json:"temperature"`    // 温度 0~2
+	TopP         float64 `json:"topP"`           // TopP 0~1
 }
 
 // KnowledgeBaseWriteNodeData 写入知识库节点数据
@@ -92,39 +123,33 @@ type RetrieveKnowledgeBaseNodeData struct {
 	Count               int          `json:"count"`               // 返回最大数量
 	SimilarityThreshold float32      `json:"similarityThreshold"` // 相似度阈值
 	OptimizeQuery       bool         `json:"optimizeQuery"`       // 是否优化用户输入
-	InputVariables      []*Variable  `json:"inputVariables"`      // 输入变量，必填query（查询内容）
-	OutputVariables     []*Variable  `json:"outputVariables"`     // 输出变量
 }
 
 type StartNodeData struct {
-	InputVariables []*Variable `json:"inputVariables"` // 输入变量列表
 }
 
-type Variable struct {
-	Type         VariableType   `json:"type"`         // 变量类型
-	Name         string         `json:"name"`         // 变量名
-	Value        string         `json:"value"`        // 变量值, 文件类型的value为文件id
-	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
-	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
-	AllowRef     bool           `json:"allowRef"`     // 是否允许引用
-	IsRef        bool           `json:"isRef"`        // 是否引用
-	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
-	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
-}
+//type Variable struct {
+//	Type         VariableType   `json:"type"`         // 变量类型
+//	Name         string         `json:"name"`         // 变量名
+//	Value        string         `json:"value"`        // 变量值, 文件类型的value为文件id
+//	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
+//	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
+//	AllowRef     bool           `json:"allowRef"`     // 是否允许引用
+//	IsRef        bool           `json:"isRef"`        // 是否引用
+//	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
+//	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
+//}
 
 type EndNodeData struct {
-	OutputVariables []*Variable `json:"outputVariables"` // 输出变量列表 key: 变量名，value: 变量来源 {{nodeId.xxx}}
 }
 
 type CrawlerNodeData struct {
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
 }
 
 type Condition struct {
-	Value1 *Variable `json:"value1"`
-	Value2 *Variable `json:"value2"`
-	Op     string    `json:"op"`
+	Value1 *Input `json:"value1"`
+	Value2 *Input `json:"value2"`
+	Op     string `json:"op"`
 }
 
 type ConditionNodeBranch struct {
@@ -144,40 +169,33 @@ type ConditionNodeOutput struct {
 type WebSearchType string
 
 type WebSearchNodeData struct {
-	TopN            int         `json:"topN"` // 返回结果数量
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
+	TopN int `json:"topN"` // 返回结果数量
 }
 
 type KeywordExtractionNodeData struct {
-	ModelId         int64       `json:"modelId,string"`
-	ModelName       string      `json:"modelName"`
-	Count           int         `json:"count"`
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
+	ModelId   int64  `json:"modelId,string"`
+	ModelName string `json:"modelName"`
+	Count     int    `json:"count"`
 }
 
 type QuestionOptimizationNodeData struct {
-	ModelId         int64       `json:"modelId,string"`
-	ModelName       string      `json:"modelName"`
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
+	ModelId   int64  `json:"modelId,string"`
+	ModelName string `json:"modelName"`
 }
 
 type ImageUnderstandingNodeData struct {
-	ModelId         int64       `json:"modelId,string"`
-	ModelName       string      `json:"modelName"`
-	Prompt          string      `json:"prompt"`
-	OutputFormat    string      `json:"outputFormat"`
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
+	ModelId      int64  `json:"modelId,string"`
+	ModelName    string `json:"modelName"`
+	Prompt       string `json:"prompt"`
+	OutputFormat string `json:"outputFormat"`
 }
 
 type OCRNodeData struct {
-	ModelId         int64       `json:"modelId,string"`
-	ModelName       string      `json:"modelName"`
-	InputVariables  []*Variable `json:"inputVariables"`
-	OutputVariables []*Variable `json:"outputVariables"`
+	ModelId   int64  `json:"modelId,string"`
+	ModelName string `json:"modelName"`
+}
+
+type MemoryNodeData struct {
 }
 
 // ConditionNodePrototype 条件判断节点原型
@@ -189,15 +207,9 @@ var ConditionNodePrototype = &Node{
 		ConditionNodeData: &ConditionNodeData{
 			Branches: []*ConditionNodeBranch{
 				{
-					Handle:    "if",
-					Connector: "and",
-					Conditions: []*Condition{
-						{
-							Value1: &Variable{Value: "0", Type: VariableTypeNumber},
-							Value2: &Variable{Value: "0", Type: VariableTypeNumber},
-							Op:     "==",
-						},
-					},
+					Handle:     "if",
+					Connector:  "and",
+					Conditions: []*Condition{},
 				},
 				{
 					Handle: "else",
@@ -215,17 +227,18 @@ var LLMNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
 		AllowAddInputVar:     true,
 		AllowAddOutputVar:    true,
+		Input:                []Input{},
+		Output: []Output{
+			{Name: "text", Type: VariableTypeString},
+		},
 		LLMNodeData: &LLMNodeData{
-			Prompt: "",
-			InputVariables: []*Variable{
-				{Name: "input", Value: "", Type: VariableTypeString, AllowRef: true},
-			},
-			OutputFormat:    "JSON",
-			OutputVariables: []*Variable{},
-			Temperature:     0.5,
-			TopP:            0.5,
-			ModelName:       "",
-			ModelId:         0,
+			SystemPrompt: "",
+			UserPrompt:   "",
+			OutputFormat: "JSON",
+			Temperature:  0.5,
+			TopP:         0.5,
+			ModelName:    "",
+			ModelId:      0,
 		},
 	},
 }
@@ -237,18 +250,18 @@ var KbRetrievalNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
+		Input: []Input{
+			{Name: "query", Type: VariableTypeString, Required: true, Fixed: true},
+		},
+		Output: []Output{
+			{Name: "total", Type: VariableTypeNumber},
+			{Name: "documents", Type: VariableTypeStringArray},
+		},
 		RetrieveKnowledgeBaseNodeData: &RetrieveKnowledgeBaseNodeData{
 			SearchType:          KbSearchTypeSimilarity,
 			Count:               10,
 			SimilarityThreshold: 0.8,
 			OptimizeQuery:       false,
-			InputVariables: []*Variable{
-				{Name: "query", Type: VariableTypeString, Required: true, Fixed: true, AllowRef: true}, // 检索内容
-			},
-			OutputVariables: []*Variable{
-				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},          // 检索到的文档总数
-				{Name: "documents", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 文档列表
-			},
 		},
 	},
 }
@@ -260,18 +273,15 @@ var CrawlerNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString, VariableTypeNumber},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
-		CrawlerNodeData: &CrawlerNodeData{
-			InputVariables: []*Variable{
-				{Name: "url", Type: VariableTypeString, Required: true, AllowRef: true, AllowedTypes: []VariableType{VariableTypeString}}, // 网页url
-			},
-			OutputVariables: []*Variable{
-				{Name: "code", Type: VariableTypeNumber, Required: true, Fixed: true},        // HTTP状态码
-				{Name: "message", Type: VariableTypeString, Required: true, Fixed: true},     // HTTP状态码描述
-				{Name: "data", Type: VariableTypeString, Required: true, Fixed: true},        // 网页内容
-				{Name: "contentType", Type: VariableTypeString, Required: true, Fixed: true}, // 网页内容类型
-
-			},
+		Input: []Input{
+			{Name: "url", Type: VariableTypeString, Required: true, Fixed: true},
 		},
+		Output: []Output{
+			{Name: "code", Type: VariableTypeNumber},
+			{Name: "content-type", Type: VariableTypeString},
+			{Name: "content", Type: VariableTypeString},
+		},
+		CrawlerNodeData: &CrawlerNodeData{},
 	},
 }
 
@@ -282,17 +292,16 @@ var KeywordExtractionNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
+		Input: []Input{
+			{Name: "question", Type: VariableTypeString, Required: true, Fixed: true},
+		},
+		Output: []Output{
+			{Name: "keywords", Type: VariableTypeStringArray},
+		},
 		KeywordExtractionNodeData: &KeywordExtractionNodeData{
 			ModelId:   0,
 			ModelName: "",
 			Count:     3,
-			InputVariables: []*Variable{
-				{Name: "question", Type: VariableTypeString, Required: true, AllowRef: true}, // 问题
-			},
-			OutputVariables: []*Variable{
-				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 关键词数量
-				{Name: "keywords", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 关键词列表
-			},
 		},
 	},
 }
@@ -304,15 +313,15 @@ var QuestionOptimizationNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
+		Input: []Input{
+			{Name: "question", Type: VariableTypeString, Required: true, Fixed: true},
+		},
+		Output: []Output{
+			{Name: "result", Type: VariableTypeString},
+		},
 		QuestionOptimizationNodeData: &QuestionOptimizationNodeData{
 			ModelId:   0,
 			ModelName: "",
-			InputVariables: []*Variable{
-				{Name: "question", Type: VariableTypeString, Required: true, AllowRef: true}, // 问题
-			},
-			OutputVariables: []*Variable{
-				{Name: "output", Type: VariableTypeString, Required: true, Fixed: true}, // 优化后的问题
-			},
 		},
 	},
 }
@@ -324,16 +333,15 @@ var WebSearchNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    false,
+		Input: []Input{
+			{Name: "query", Type: VariableTypeString, Required: true, Fixed: true},
+		},
+		Output: []Output{
+			{Name: "urls", Type: VariableTypeStringArray},
+			{Name: "contents", Type: VariableTypeStringArray},
+		},
 		WebSearchNodeData: &WebSearchNodeData{
 			TopN: 10,
-			InputVariables: []*Variable{
-				{Name: "query", Type: VariableTypeString, Required: true, Fixed: true, AllowRef: true},
-			},
-			OutputVariables: []*Variable{
-				{Name: "total", Type: VariableTypeNumber, Required: true, Fixed: true},         // 搜索到的网页总数
-				{Name: "urls", Type: VariableTypeStringArray, Required: true, Fixed: true},     // 搜索到的网页url列表
-				{Name: "contents", Type: VariableTypeStringArray, Required: true, Fixed: true}, // 搜索到网页内容列表
-			},
 		},
 	},
 }
@@ -345,15 +353,17 @@ var ImageUnderstandingNodePrototype = &Node{
 		DefaultAllowVarTypes: []VariableType{VariableTypeString},
 		AllowAddInputVar:     false,
 		AllowAddOutputVar:    true,
+		Input: []Input{
+			{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true},
+		},
+		Output: []Output{
+			{Name: "text", Type: VariableTypeString},
+		},
 		ImageUnderstandingNodeData: &ImageUnderstandingNodeData{
 			ModelId:      0,
 			ModelName:    "",
 			Prompt:       "",
 			OutputFormat: "JSON",
-			InputVariables: []*Variable{
-				{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true, AllowRef: true, IsRef: true},
-			},
-			OutputVariables: []*Variable{},
 		},
 	},
 }
@@ -361,17 +371,27 @@ var ImageUnderstandingNodePrototype = &Node{
 var OCRNodePrototype = &Node{
 	Type: NodeTypeOCR,
 	Data: NodeData{
-		Name:                 "图片文字提取",
-		DefaultAllowVarTypes: []VariableType{VariableTypeString},
-		AllowAddInputVar:     false,
-		AllowAddOutputVar:    false,
-		OCRNodeData: &OCRNodeData{
-			InputVariables: []*Variable{
-				{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true, AllowRef: true, IsRef: true},
-			},
-			OutputVariables: []*Variable{
-				{Name: "document", Type: VariableTypeString, Required: true, Fixed: true},
-			},
+		Name:              "图片文字提取",
+		AllowAddInputVar:  false,
+		AllowAddOutputVar: false,
+		Input: []Input{
+			{Name: "image", Type: VariableTypeImageFile, Required: true, Fixed: true},
 		},
+		Output: []Output{
+			{Name: "text", Type: VariableTypeString},
+		},
+		OCRNodeData: &OCRNodeData{},
+	},
+}
+
+var EndNodePrototype = &Node{
+	Type: NodeTypeEnd,
+	Data: NodeData{
+		Name:              "结束",
+		AllowAddInputVar:  true,
+		AllowAddOutputVar: false,
+		Input:             []Input{},
+		Output:            []Output{},
+		EndNodeData:       &EndNodeData{},
 	},
 }

@@ -17,7 +17,7 @@ const node = findNode(props.id);
     </template>
     <node-variable-display :has-input="true"
                            :has-output="false"
-                           :input-variables="data['startNodeData'].inputVariables"></node-variable-display>
+                           :input-variables="data['input']"></node-variable-display>
   </Card>
 </template>
 

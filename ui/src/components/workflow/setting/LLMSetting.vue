@@ -47,8 +47,8 @@ function onModelChange(modelId) {
     <Select v-model:value="node.data['llmNodeData']['outputFormat']" :options="nodeConstants.llmOutputFormatOptions"/>
   </FormItem>
   <VariableTable :node-id="node.id"
-                 :input-variables="node.data['llmNodeData'].inputVariables"
-                 :output-variables="node.data['llmNodeData'].outputVariables"
+                 :input-variables="node.data['input']"
+                 :output-variables="node.data['output']"
                  :node-data="node.data"
                  :node="node"/>
 </template>

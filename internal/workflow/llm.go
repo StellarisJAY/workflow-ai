@@ -29,8 +29,8 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 		panic(errors.New("创建大模型失败"))
 	}
 	// 创建提示词模板
-	inputVariables := make([]string, 0, len(llmNodeData.InputVariables))
-	for _, variable := range llmNodeData.InputVariables {
+	inputVariables := make([]string, 0, len(node.Data.Input))
+	for _, variable := range node.Data.Input {
 		inputVariables = append(inputVariables, variable.Name)
 	}
 	prompt := prompts.NewPromptTemplate(llmNodeData.Prompt, inputVariables)
@@ -49,20 +49,11 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 		output = strings.TrimPrefix(output, "```json")
 		output = strings.TrimSuffix(output, "```")
 		output = strings.TrimSpace(output)
-	} else if llmNodeData.OutputFormat == "TEXT" {
-		// 文本格式输出，需要转换成与输出变量表对于的JSON格式
-		for _, variable := range llmNodeData.OutputVariables {
-			if variable.Type == model.VariableTypeString {
-				out := map[string]string{
-					variable.Name: output,
-				}
-				data, _ := json.Marshal(out)
-				output = string(data)
-				break
-			}
-		}
 	}
-	nodeInstance.Output = output
+	outputMap := make(map[string]any)
+	outputMap["text"] = output
+	outData, _ := json.Marshal(outputMap)
+	nodeInstance.Output = string(outData)
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {

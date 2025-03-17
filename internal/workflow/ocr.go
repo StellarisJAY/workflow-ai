@@ -28,7 +28,7 @@ func (e *Engine) executeOCRNode(ctx context.Context, node *model.Node, nodeInsta
 
 	output, err := e.doImageUnderstandingTask(ctx, fileId, model.OCRPrompt, "TEXT", llm)
 	out := map[string]string{
-		"document": output,
+		"text": output,
 	}
 	data, _ := json.Marshal(out)
 	output = string(data)

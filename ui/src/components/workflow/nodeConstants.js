@@ -44,7 +44,8 @@ const nodeTypeOptions = ref([
     {value: "keywordExtraction", label: "关键词提取", description: "从问题提取关键词"},
     {value: "questionOptimization", label: "提问优化", description: "优化用户提出的问题，以适配不同场景"},
     {value: "imageUnderstanding", label: "图像理解", description: "根据提示词理解图片"},
-    {value: "ocr", label: "文字提取", description: "从图片提取文字"}
+    {value: "ocr", label: "文字提取", description: "从图片提取文字"},
+    {value: "end", label:"结束", description: "结束流程"},
 ]);
 
 const llmOutputFormatOptions = [

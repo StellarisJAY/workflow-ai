@@ -39,8 +39,9 @@ function onEdgeDelete(ev) {
     <FormItem label="模型">
       {{data['keywordExtractionNodeData']['modelName']}}
     </FormItem>
-    <node-variable-display :input-variables="data['keywordExtractionNodeData'].inputVariables"
-                           :output-variables="data['keywordExtractionNodeData'].outputVariables"
+
+    <node-variable-display :input-variables="data['input']"
+                           :output-variables="data['output']"
                            :has-output="true"
                            :has-input="true"/>
   </Card>

@@ -41,10 +41,10 @@ onMounted(()=>{
     </FormItem>
   </Form>
   <VariableTable :node-id="node.id"
+                 :input-variables="node.data['input']"
+                 :output-variables="node.data['output']"
                  :node-data="node.data"
-                 :node="node"
-                 :input-variables="node.data['retrieveKnowledgeBaseNodeData'].inputVariables"
-                 :output-variables="node.data['retrieveKnowledgeBaseNodeData'].outputVariables"/>
+                 :node="node"/>
 </template>
 
 <style scoped></style>

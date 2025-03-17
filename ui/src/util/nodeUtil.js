@@ -40,19 +40,9 @@ function getPrevNodesOutputs(currNodeId) {
     let options = [];
     prevNodes.forEach(node=>{
         if (!node.data) return;
-        let outputVariables;
-        switch (node.type) {
-            case "llm": outputVariables = node.data['llmNodeData'].outputVariables; break;
-            case "start": outputVariables = node.data['startNodeData'].inputVariables; break;
-            case "end": outputVariables = node.data['endNodeData'].outputVariables; break;
-            case "crawler": outputVariables = node.data['crawlerNodeData'].outputVariables; break;
-            case "knowledgeRetrieval": outputVariables = node.data['retrieveKnowledgeBaseNodeData'].outputVariables; break;
-            case "webSearch": outputVariables = node.data['webSearchNodeData'].outputVariables; break;
-            case "keywordExtraction": outputVariables = node.data['keywordExtractionNodeData'].outputVariables; break;
-            case "questionOptimization": outputVariables = node.data['questionOptimizationNodeData'].outputVariables; break;
-            case "imageUnderstanding": outputVariables = node.data['imageUnderstandingNodeData'].outputVariables; break;
-            case "ocr": outputVariables = node.data['ocrNodeData'].outputVariables; break;
-        }
+        let outputVariables = node.data["output"];
+        // 开始节点的输出和输入相同
+        if (node.type === "start") outputVariables = node.data["input"];
         if (outputVariables) {
             let option = {
                 label: node.data['name'],
@@ -74,7 +64,7 @@ function getPrevNodesOutputs(currNodeId) {
  * @param needReset 通过变量引用的节点id判断是否需要重置的函数
  */
 function resetInputVariableRef(nodeData, needReset) {
-    nodeData.inputVariables.forEach(variable=>variableReset(variable, needReset));
+    nodeData.input.forEach(variable=>variableReset(variable, needReset));
 }
 /**
  * 删除节点或连线导致引用失效，重置节点输出变量列表的引用
@@ -86,13 +76,9 @@ function resetOutputVariableRef(nodeData, needReset) {
 }
 
 function variableReset(variable, needReset) {
-    if (variable.isRef) {
-        const ref = variable.ref.split(".");
-        if (ref.length === 2 && needReset(ref[0])) {
-            variable.isRef = true;
-            variable.ref = "";
-            variable.refOption = [];
-        }
+    if (variable.value.type === "ref" && needReset(variable.value.sourceNode)) {
+        variable.value.sourceNode = "";
+        variable.value.sourceName = "";
     }
 }
 

@@ -103,7 +103,7 @@ onMounted(_=>{
 </script>
 
 <template>
-  <PageHeader title="流程模板列表">
+  <PageHeader title="应用列表">
     <template #extra>
       <Button type="primary" @click="openNewTemplate">新建</Button>
     </template>
