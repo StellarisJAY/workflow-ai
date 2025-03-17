@@ -24,7 +24,7 @@ func (e *Engine) executeQuestionOptimizeNode(ctx context.Context, node *model.No
 	if err != nil {
 		panic(err)
 	}
-	nodeInstance.Output = fmt.Sprintf("{\"output\": \"%s\"}", output)
+	nodeInstance.Output = fmt.Sprintf("{\"result\": \"%s\"}", output)
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
 	nodeInstance.CompleteTime = time.Now()
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
