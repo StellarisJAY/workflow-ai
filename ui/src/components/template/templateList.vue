@@ -7,6 +7,7 @@ import {Card, List, ListItem, Pagination, Dropdown, Menu, MenuItem, Popconfirm, 
 import {EditOutlined, PlayCircleOutlined, EllipsisOutlined} from "@ant-design/icons-vue";
 import workflowAPI from "../../api/workflow.js";
 import fsAPI from "../../api/fs.js";
+import BeforeExecute from "../workflow/beforeExecute.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -18,11 +19,7 @@ const query = ref({
 });
 const total = ref(0);
 const executeInputOpen = ref(false);
-const executeInputVars = ref([]);
 const startingTemplateId = ref("");
-const executePending = ref(false);
-
-const fileLists = ref({});
 
 function listTemplates() {
   templateAPI.listTemplate(query.value).then(resp=>{
@@ -49,52 +46,8 @@ function openNewTemplate() {
 }
 
 function openExecuteInputVariableDrawer(id) {
-  templateAPI.getInputVariables(id).then(resp=>{
-    executeInputVars.value = resp.data;
-    startingTemplateId.value = id;
-    executeInputOpen.value = true;
-  });
-}
-
-function startWorkflow() {
-  executePending.value = true;
-  const form = new FormData();
-  for (let k in fileLists.value) {
-    form.append(k, fileLists.value[k][0].originFileObj);
-  }
-  fsAPI.batchUpload(form).then(resp=>{
-    const fileIds = resp.data['fileIds'];
-    let i = 0;
-    for (let k in fileLists.value) {
-      const variable = executeInputVars.value.find(item=>item.name === k);
-      if (variable) {
-        variable.value = fileIds[i];
-        i++;
-      }
-    }
-    const input = {};
-    executeInputVars.value.forEach((item) => {
-      input[item.name] = item.value;
-    });
-    const request = {
-      inputs: input,
-      templateId: startingTemplateId.value,
-    };
-    workflowAPI.start(request).then(resp=>{
-      message.success("开始执行成功");
-      const workflowId = resp.data['workflowId'];
-      router.push("/view/"+workflowId);
-    }).catch(()=>{
-      executePending.value = false;
-    });
-  }).catch(err=>{
-    executePending.value = false;
-  })
-
-}
-
-function onUploadFileChange(ev, variable) {
-  fileLists.value[variable.name] = ev.fileList;
+  startingTemplateId.value = id;
+  executeInputOpen.value = true;
 }
 
 onMounted(_=>{
@@ -142,18 +95,7 @@ onMounted(_=>{
   </List>
   <Pagination :current="query.page" :page-size="query.pageSize" :total="total"></Pagination>
   <Drawer title="输入变量" :open="executeInputOpen" @close="_=>{executeInputOpen = false;}">
-    <Spin :spinning="executePending">
-      <Form>
-        <FormItem v-for="variable in executeInputVars" :label="variable.name">
-          <Input v-model:value="variable.value" v-if="variable.type === 'string'" placeholder="变量值"/>
-          <Upload v-else :file-list="fileLists[variable.name]" :multiple="false"
-                  :before-upload="()=>false" @change="ev=>onUploadFileChange(ev, variable)">
-            <Button size="small">上传</Button>
-          </Upload>
-        </FormItem>
-      </Form>
-      <Button type="primary" @click="startWorkflow">执行流程</Button>
-    </Spin>
+    <BeforeExecute :starting-template-id="startingTemplateId"/>
   </Drawer>
 </template>
 

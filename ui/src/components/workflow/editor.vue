@@ -19,6 +19,7 @@ import KeywordExtractionSetting from "./setting/KeywordExtractionSetting.vue";
 import QuestionOptimizationSetting from "./setting/QuestionOptimizationSetting.vue";
 import ImageUnderstandingSetting from "./setting/ImageUnderstandingSetting.vue";
 import OCRSetting from "./setting/OCRSetting.vue";
+import BeforeExecute from "./beforeExecute.vue";
 
 const props = defineProps(['isNewTemplate','template'])
 const route = useRoute();
@@ -80,6 +81,8 @@ const imageUnderstandingDrawerOpen = ref(false);
 const ocrDrawerOpen = ref(false);
 
 const currentSettingNodes = ref({});
+
+const debugRunDrawerOpen = ref(false);
 
 // 点击节点，弹出侧边设置
 onNodeClick(event => {
@@ -218,7 +221,8 @@ function updateTemplate() {
 		<template #extra>
       <Input v-model:value="template.name"></Input>
 			<Button type="primary" @click="saveTemplate" v-if="isNewTemplate">保存</Button>
-      <Button type="primary" v-else @click="updateTemplate">更新</Button>
+      <Button type="primary" v-if="!isNewTemplate" @click="updateTemplate">更新</Button>
+      <Button type="primary" v-if="!isNewTemplate" @click="_=>{debugRunDrawerOpen=true;}">调试运行</Button>
 		</template>
 	</page-header>
 	<div style="height: 88vh;">
@@ -312,6 +316,12 @@ function updateTemplate() {
           @close="_=>{ocrDrawerOpen = false;}"
           :destroy-on-close="true">
     <OCRSetting :node="currentSettingNodes['ocr']"/>
+  </Drawer>
+
+  <Drawer v-if="!isNewTemplate" title="调试输入"
+          :open="debugRunDrawerOpen"
+          @close="_=>{debugRunDrawerOpen = false;}" :destroy-on-close="true">
+    <BeforeExecute :starting-template-id="template.id"/>
   </Drawer>
 </template>
 
