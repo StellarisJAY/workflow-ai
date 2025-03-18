@@ -64,7 +64,9 @@ function getPrevNodesOutputs(currNodeId) {
  * @param needReset 通过变量引用的节点id判断是否需要重置的函数
  */
 function resetInputVariableRef(nodeData, needReset) {
-    nodeData.input.forEach(variable=>variableReset(variable, needReset));
+    if (nodeData.input) {
+        nodeData.input.forEach(variable=>variableReset(variable, needReset));
+    }
 }
 /**
  * 删除节点或连线导致引用失效，重置节点输出变量列表的引用
@@ -72,7 +74,9 @@ function resetInputVariableRef(nodeData, needReset) {
  * @param needReset 通过变量引用的节点id判断是否需要重置的函数
  */
 function resetOutputVariableRef(nodeData, needReset) {
-    nodeData.outputVariables.forEach(variable=>variableReset(variable, needReset));
+    if (nodeData.output) {
+        nodeData.output.forEach(variable=>variableReset(variable, needReset));
+    }
 }
 
 function variableReset(variable, needReset) {

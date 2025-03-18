@@ -3,6 +3,8 @@ package workflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"github.com/StellrisJAY/workflow-ai/internal/ai"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/prompts"
@@ -14,14 +16,14 @@ func (e *Engine) executeKeywordExtractionNode(ctx context.Context, node *model.N
 	nodeData *model.KeywordExtractionNodeData, inputMap map[string]any) {
 	q, ok := inputMap["question"]
 	if !ok {
-		panic("缺少question参数")
+		panic(errors.New("缺少question参数"))
 	}
 	question := q.(string)
-	llm, err := e.modelRepo.GetDetail(ctx, nodeData.ModelId)
+	detail, err := e.modelRepo.GetProviderModelDetail(ctx, nodeData.ModelId)
 	if err != nil {
 		panic(err)
 	}
-	modelAPI, err := makeModelAPI(llm, "JSON")
+	modelAPI, err := ai.MakeModelInterface(detail, "JSON")
 	if err != nil {
 		panic(err)
 	}

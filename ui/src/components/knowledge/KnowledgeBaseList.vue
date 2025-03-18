@@ -4,13 +4,10 @@ import {
   List,
   ListItem,
   Button,
-  Tag,
   Drawer,
-  Popconfirm,
   Form,
   PageHeader,
-  Dropdown,
-  Pagination, FormItem, Menu, Input, Textarea, Select, message,
+  Pagination, FormItem, Input, Textarea, Select, message,
 } from "ant-design-vue";
 import {onMounted, ref} from "vue";
 import llmAPI from '../../api/llm.js';
@@ -18,6 +15,8 @@ import knowledgeBaseAPI from '../../api/knowledgeBase.js';
 import {SettingOutlined, UploadOutlined} from "@ant-design/icons-vue";
 import timeUtil from "../../util/timeUtil.js";
 import {useRouter} from "vue-router";
+import providerAPI from "../../api/provider.js";
+import provider from "../../api/provider.js";
 const query = ref({
   page: 1,
   pageSize: 16,
@@ -40,11 +39,11 @@ function openCreateKBDrawer() {
 }
 
 function listEmbeddingModels() {
-  llmAPI.listModels({modelType: "embedding"}).then(resp=>{
+  provider.listProviderModels({modelType: "embedding"}).then(resp=>{
     const models = resp.data;
     const options = [];
     models.forEach(model=>{
-      options.push({label: model.name, value: model.id});
+      options.push({label: model['providerName'] + "/" + model.modelName, value: model.id});
     });
     embeddingModels.value = options;
   });

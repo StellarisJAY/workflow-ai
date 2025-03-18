@@ -128,18 +128,6 @@ type RetrieveKnowledgeBaseNodeData struct {
 type StartNodeData struct {
 }
 
-//type Variable struct {
-//	Type         VariableType   `json:"type"`         // 变量类型
-//	Name         string         `json:"name"`         // 变量名
-//	Value        string         `json:"value"`        // 变量值, 文件类型的value为文件id
-//	Ref          string         `json:"ref"`          // 引用变量名，引用节点实例ID/变量名，只能
-//	AllowedTypes []VariableType `json:"allowedTypes"` // 允许的变量类型
-//	AllowRef     bool           `json:"allowRef"`     // 是否允许引用
-//	IsRef        bool           `json:"isRef"`        // 是否引用
-//	Required     bool           `json:"required"`     // 是否必填, 必填后不可删除
-//	Fixed        bool           `json:"fixed"`        // 是否固定, 固定后不可修改
-//}
-
 type EndNodeData struct {
 }
 
@@ -394,4 +382,9 @@ var EndNodePrototype = &Node{
 		Output:            []Output{},
 		EndNodeData:       &EndNodeData{},
 	},
+}
+
+var SystemVariablePrototype = []Input{
+	{Name: "sys.query", Type: VariableTypeString, Fixed: true, Value: Value{Type: VarValueTypeLiteral, Content: ""}},
+	{Name: "sys.workflow_id", Type: VariableTypeString, Fixed: true, Value: Value{Type: VarValueTypeLiteral, Content: ""}},
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/StellrisJAY/workflow-ai/internal/ai"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/tmc/langchaingo/llms"
 	"strconv"
@@ -26,12 +27,12 @@ func (e *Engine) executeImageUnderstandingNode(ctx context.Context, node *model.
 		panic(errors.New("image参数错误"))
 	}
 
-	llm, _ := e.modelRepo.GetDetail(ctx, nodeData.ModelId)
-	if llm == nil || llm.ModelType != model.ModelTypeImageUnderstanding {
+	detail, _ := e.modelRepo.GetProviderModelDetail(ctx, nodeData.ModelId)
+	if detail == nil || detail.ModelType != model.ProviderModelTypeImageUnderstanding {
 		panic(errors.New("模型不存在"))
 	}
 
-	output, err := e.doImageUnderstandingTask(ctx, fileId, nodeData.Prompt, nodeData.OutputFormat, llm)
+	output, err := e.doImageUnderstandingTask(ctx, fileId, nodeData.Prompt, nodeData.OutputFormat, detail)
 	if nodeData.OutputFormat == "JSON" {
 		output = strings.TrimPrefix(output, "```json")
 		output = strings.TrimSuffix(output, "```")
@@ -49,7 +50,7 @@ func (e *Engine) executeImageUnderstandingNode(ctx context.Context, node *model.
 }
 
 func (e *Engine) doImageUnderstandingTask(ctx context.Context, fileId int64, prompt string, outputFormat string,
-	llm *model.ModelDetailDTO) (string, error) {
+	detail *model.ProviderModelDetail) (string, error) {
 	file, err := e.fileRepo.Get(ctx, fileId)
 	if err != nil {
 		return "", err
@@ -65,7 +66,7 @@ func (e *Engine) doImageUnderstandingTask(ctx context.Context, fileId int64, pro
 		return "", err
 	}
 
-	api, err := makeModelAPI(llm, outputFormat)
+	api, err := ai.MakeModelInterface(detail, outputFormat)
 	if err != nil {
 		return "", err
 	}

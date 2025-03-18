@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/StellrisJAY/workflow-ai/internal/ai"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
 	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
 	"github.com/StellrisJAY/workflow-ai/internal/repo/vector"
 	"github.com/tmc/langchaingo/documentloaders"
 	"github.com/tmc/langchaingo/embeddings"
-	"github.com/tmc/langchaingo/llms/ollama"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/textsplitter"
 	"log"
@@ -25,11 +23,11 @@ type DocumentProcessor struct {
 	workerCancel       []context.CancelFunc
 	taskChan           chan int64 // 任务队列 kbProcessTaskId
 	workers            int
-	modelRepo          *repo.ModelRepo
+	modelRepo          *repo.ProviderRepo
 	vectorStoreFactory vector.Factory
 }
 
-func NewDocumentProcessor(workers int, kbRepo *repo.KnowledgeBaseRepo, fs fs.FileStore, modelRepo *repo.ModelRepo,
+func NewDocumentProcessor(workers int, kbRepo *repo.KnowledgeBaseRepo, fs fs.FileStore, modelRepo *repo.ProviderRepo,
 	factory vector.Factory) *DocumentProcessor {
 	proc := &DocumentProcessor{
 		kbRepo:             kbRepo,
@@ -58,11 +56,11 @@ func (d *DocumentProcessor) SimilaritySearch(ctx context.Context, kbId int64, in
 	if err != nil {
 		return nil, err
 	}
-	llm, err := d.modelRepo.GetDetail(ctx, kb.EmbeddingModel)
+	detail, err := d.modelRepo.GetProviderModelDetail(ctx, kb.EmbeddingModel)
 	if err != nil {
 		return nil, err
 	}
-	embeddingModel, err := makeEmbeddingModel(llm)
+	embeddingModel, err := ai.MakeEmbeddingModel(detail)
 	if err != nil {
 		return nil, err
 	}
@@ -135,11 +133,11 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 
 // embedDocument 嵌入文档
 func (d *DocumentProcessor) embedDocument(ctx context.Context, kb *model.KnowledgeBaseDetailDTO, chunks []schema.Document) ([]string, error) {
-	llm, err := d.modelRepo.GetDetail(ctx, kb.EmbeddingModel)
+	detail, err := d.modelRepo.GetProviderModelDetail(ctx, kb.EmbeddingModel)
 	if err != nil {
 		return nil, err
 	}
-	embeddingModel, err := makeEmbeddingModel(llm)
+	embeddingModel, err := ai.MakeEmbeddingModel(detail)
 	if err != nil {
 		return nil, err
 	}
@@ -230,20 +228,4 @@ func (d *DocumentProcessor) handleTask(ctx context.Context, taskId int64) {
 	if err := d.kbRepo.UpdateFileStatus(ctx, file.Id, model.KbFileProcessed); err != nil {
 		log.Println("handleTask err:", err)
 	}
-}
-
-func makeEmbeddingModel(llm *model.ModelDetailDTO) (embeddings.EmbedderClient, error) {
-	var embeddingModel embeddings.EmbedderClient
-	var err error
-	switch llm.ApiType {
-	case string(model.ApiTypeOpenAI):
-		embeddingModel, err = openai.New(openai.WithEmbeddingModel(llm.Code),
-			openai.WithBaseURL(llm.BaseUrl),
-			openai.WithToken(llm.ApiKey))
-	case string(model.ApiTypeOllama):
-		embeddingModel, err = ollama.New(ollama.WithModel(llm.Code), ollama.WithServerURL(llm.BaseUrl))
-	default:
-		err = fmt.Errorf("unknown api type: %s", llm.ApiType)
-	}
-	return embeddingModel, err
 }

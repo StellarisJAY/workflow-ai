@@ -3,16 +3,8 @@ package v1
 import (
 	"github.com/StellrisJAY/workflow-ai/internal/config"
 	"github.com/StellrisJAY/workflow-ai/internal/middleware"
-	"github.com/StellrisJAY/workflow-ai/internal/rag"
-	"github.com/StellrisJAY/workflow-ai/internal/repo"
-	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
-	"github.com/StellrisJAY/workflow-ai/internal/repo/vector"
-	"github.com/StellrisJAY/workflow-ai/internal/service"
-	"github.com/StellrisJAY/workflow-ai/internal/workflow"
-	"github.com/bwmarrin/snowflake"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 type Router struct {
@@ -26,44 +18,8 @@ func NewRouter(conf *config.Config) *Router {
 	return r
 }
 
-func (r *Router) Init() error {
-	repository, err := repo.NewRepository(r.conf)
-	if err != nil {
-		return err
-	}
-	repository.MigrateDB()
-	nodeId, err := strconv.ParseInt(r.conf.Server.Id, 10, 64)
-	if err != nil {
-		return err
-	}
-	snowflakeNode, err := snowflake.NewNode(nodeId)
-	if err != nil {
-		return err
-	}
-
-	store := fs.NewFileStore(r.conf)
-	llmRepo := repo.NewModelRepo(repository)
-	templateRepo := repo.NewTemplateRepo(repository)
-	instanceRepo := repo.NewInstanceRepo(repository)
-	kbRepo := repo.NewKnowledgeBaseRepo(repository)
-	fileRepo := repo.NewFileRepo(repository)
-	tm := repo.NewTransactionManager(repository)
-	vectorstoreFactory := vector.MakeFactory(*r.conf)
-	documentProcessor := rag.NewDocumentProcessor(8, kbRepo, store, llmRepo, vectorstoreFactory)
-	engine := workflow.NewEngine(instanceRepo, llmRepo, snowflakeNode, tm, kbRepo, documentProcessor, r.conf, fileRepo, store)
-
-	llmService := service.NewModelService(llmRepo, snowflakeNode)
-	templateService := service.NewTemplateService(templateRepo, snowflakeNode)
-	workflowService := service.NewWorkflowService(templateRepo, engine, instanceRepo)
-	kbService := service.NewKnowledgeBaseService(kbRepo, snowflakeNode, tm, store, documentProcessor, vectorstoreFactory)
-	fileService := service.NewFileService(fileRepo, store, tm, snowflakeNode)
-
-	llmHandler := NewModelHandler(llmService)
-	templateHandler := NewTemplateHandler(templateService)
-	workflowHandler := NewWorkflowHandler(workflowService)
-	kbHandler := NewKnowledgeBaseHandler(kbService)
-	fileHandler := NewFSHandler(fileService)
-
+func (r *Router) Init(templateHandler *TemplateHandler, workflowHandler *WorkflowHandler, kbHandler *KnowledgeBaseHandler,
+	fileHandler *FSHandler, providerHandler *ProviderHandler) error {
 	r.e.Use(middleware.Recovery)
 	r.e.Use(cors.New(cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -76,13 +32,13 @@ func (r *Router) Init() error {
 		v1.GET("/ping", func(c *gin.Context) {
 			c.JSON(200, "pong")
 		})
-		model := v1.Group("/model")
+		provider := v1.Group("/provider")
 		{
-			model.POST("/create", llmHandler.CreateModel)
-			model.DELETE("/delete", nil)
-			model.PUT("/update", nil)
-			model.GET("/detail/:id", llmHandler.GetModelDetail)
-			model.GET("/list", llmHandler.ListModel)
+			provider.GET("/schemas", providerHandler.ListProviderSchemas)
+			provider.POST("/create", providerHandler.CreateProvider)
+			provider.POST("/model/create", providerHandler.CreateProviderModel)
+			provider.GET("/model/list", providerHandler.ListProviderModel)
+			provider.GET("/list", providerHandler.ListProviders)
 		}
 		template := v1.Group("/template")
 		{

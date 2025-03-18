@@ -75,6 +75,11 @@ function createNodeData(node) {
 const nodePrototypes = ref({});
 
 async function loadNodePrototypes() {
+    const protoTypesStr = sessionStorage.getItem("node-prototypes");
+    if (protoTypesStr) {
+        nodePrototypes.value =  JSON.parse(protoTypesStr);
+        return
+    }
     const prototypes = {};
     for (let i = 0; i < nodeTypeOptions.value.length; i++) {
         const nodeType = nodeTypeOptions.value[i];
@@ -82,6 +87,7 @@ async function loadNodePrototypes() {
         prototypes[nodeType.value] = resp.data;
     }
     nodePrototypes.value = prototypes;
+    sessionStorage.setItem("node-prototypes", JSON.stringify(prototypes));
 }
 
 export default {

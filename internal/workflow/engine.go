@@ -20,7 +20,7 @@ type Engine struct {
 	instanceRepo *repo.InstanceRepo
 	tm           *repo.TransactionManager
 	snowflake    *snowflake.Node
-	modelRepo    *repo.ModelRepo
+	modelRepo    *repo.ProviderRepo
 	kbRepo       *repo.KnowledgeBaseRepo
 	rag          *rag.DocumentProcessor
 	conf         *config.Config
@@ -28,7 +28,7 @@ type Engine struct {
 	fileStore    fs.FileStore
 }
 
-func NewEngine(instanceRepo *repo.InstanceRepo, modelRepo *repo.ModelRepo, snowflake *snowflake.Node,
+func NewEngine(instanceRepo *repo.InstanceRepo, modelRepo *repo.ProviderRepo, snowflake *snowflake.Node,
 	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor, conf *config.Config,
 	fileRepo *repo.FileRepo, fileStore fs.FileStore) *Engine {
 	return &Engine{

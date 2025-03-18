@@ -21,12 +21,12 @@ func (e *Engine) executeOCRNode(ctx context.Context, node *model.Node, nodeInsta
 		panic(errors.New("image参数错误"))
 	}
 
-	llm, _ := e.modelRepo.GetDetail(ctx, nodeData.ModelId)
-	if llm == nil || llm.ModelType != model.ModelTypeImageUnderstanding {
+	detail, _ := e.modelRepo.GetProviderModelDetail(ctx, nodeData.ModelId)
+	if detail == nil || detail.ModelType != model.ProviderModelTypeImageUnderstanding {
 		panic(errors.New("模型不存在"))
 	}
 
-	output, err := e.doImageUnderstandingTask(ctx, fileId, model.OCRPrompt, "TEXT", llm)
+	output, err := e.doImageUnderstandingTask(ctx, fileId, model.OCRPrompt, "TEXT", detail)
 	out := map[string]string{
 		"text": output,
 	}

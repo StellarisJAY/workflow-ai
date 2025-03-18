@@ -49,7 +49,7 @@ func (tm *TransactionManager) Tx(ctx context.Context, fn func(c context.Context)
 
 func (r *Repository) MigrateDB() {
 	migrator := r.db.Migrator()
-	tables := []any{&model.Model{}, &model.Template{}, &model.WorkflowInstance{}, &model.NodeInstance{},
+	tables := []any{&model.Provider{}, &model.ProviderModel{}, &model.Template{}, &model.WorkflowInstance{}, &model.NodeInstance{},
 		&model.KnowledgeBase{}, &model.KnowledgeBaseFile{}, &model.User{}, &model.KbFileProcessTask{},
 		&model.KbFileProcessOptions{}, &model.KbFileChunk{}, &model.File{}}
 	for _, table := range tables {

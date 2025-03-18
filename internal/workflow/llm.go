@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/StellrisJAY/workflow-ai/internal/ai"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/tmc/langchaingo/chains"
-	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/ollama"
-	"github.com/tmc/langchaingo/llms/openai"
 	"github.com/tmc/langchaingo/prompts"
 	"log"
 	"strings"
@@ -18,12 +16,12 @@ import (
 
 func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance,
 	llmNodeData *model.LLMNodeData, inputMap map[string]any) {
-	detail, _ := e.modelRepo.GetDetail(ctx, llmNodeData.ModelId)
+	detail, _ := e.modelRepo.GetProviderModelDetail(ctx, llmNodeData.ModelId)
 	if detail == nil {
 		panic(errors.New("无法找到节点需要的大模型"))
 	}
 	// 创建大模型接口
-	llm, err := makeModelAPI(detail, llmNodeData.OutputFormat)
+	llm, err := ai.MakeModelInterface(detail, llmNodeData.OutputFormat)
 	if err != nil {
 		log.Println("create llm error:", err)
 		panic(errors.New("创建大模型失败"))
@@ -61,38 +59,8 @@ func (e *Engine) executeLLMNode(ctx context.Context, node *model.Node, nodeInsta
 	}
 }
 
-func makeModelAPI(detail *model.ModelDetailDTO, outputFormat string) (llms.Model, error) {
-	// 创建大模型接口
-	var llm llms.Model
-	var err error
-	switch model.ApiType(detail.ApiType) {
-	case model.ApiTypeOpenAI:
-		options := []openai.Option{
-			openai.WithModel(detail.Code),
-			openai.WithBaseURL(detail.BaseUrl),
-			openai.WithToken(detail.ApiKey),
-		}
-		if outputFormat == "JSON" {
-			options = append(options, openai.WithResponseFormat(openai.ResponseFormatJSON))
-		}
-		llm, err = openai.New(options...)
-	case model.ApiTypeOllama:
-		options := []ollama.Option{
-			ollama.WithModel(detail.Code),
-			ollama.WithServerURL(detail.BaseUrl),
-		}
-		if outputFormat == "JSON" {
-			options = append(options, ollama.WithFormat("json"))
-		}
-		llm, err = ollama.New(options...)
-	default:
-		return nil, errors.New("不支持的大模型类型")
-	}
-	return llm, err
-}
-
-func executeLLMTask(llm *model.ModelDetailDTO, promptTemplate string, outputFormat string, inputMap map[string]any) (string, error) {
-	modelAPI, err := makeModelAPI(llm, outputFormat)
+func executeLLMTask(detail *model.ProviderModelDetail, promptTemplate string, outputFormat string, inputMap map[string]any) (string, error) {
+	modelAPI, err := ai.MakeModelInterface(detail, outputFormat)
 	if err != nil {
 		return "", err
 	}

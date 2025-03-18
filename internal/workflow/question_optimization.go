@@ -14,11 +14,11 @@ func (e *Engine) executeQuestionOptimizeNode(ctx context.Context, node *model.No
 		panic("缺少question参数")
 	}
 	question := q.(string)
-	llm, err := e.modelRepo.GetDetail(ctx, nodeData.ModelId)
+	detail, err := e.modelRepo.GetProviderModelDetail(ctx, nodeData.ModelId)
 	if err != nil {
 		panic(err)
 	}
-	output, err := executeLLMTask(llm, model.QuestionOptimizationPrompt, "TEXT", map[string]interface{}{
+	output, err := executeLLMTask(detail, model.QuestionOptimizationPrompt, "TEXT", map[string]interface{}{
 		"question": question,
 	})
 	if err != nil {
