@@ -141,7 +141,7 @@ func (m *MilvusVectorStore) SimilaritySearch(ctx context.Context, query string, 
 	idxParam := index.NewHNSWAnnParam(100)
 	idxParam.WithRadius(float64(threshold))
 	option := milvusclient.NewSearchOption(milvusStoreCollectionName, n, vectors).
-		WithSearchParam("kbId", strconv.FormatInt(m.kbId, 10)).
+		WithFilter(fmt.Sprintf("kb_id == %d", m.kbId)).
 		WithAnnParam(idxParam).
 		WithOutputFields("file_id", "chunk_data", "chunk_id")
 	result, err := m.client.Search(context.Background(), option)
