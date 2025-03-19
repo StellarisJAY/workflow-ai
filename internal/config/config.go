@@ -30,6 +30,11 @@ type Config struct {
 		Db       int    `yaml:"db"`
 	}
 	BochaAPIKey string `yaml:"bochaAPIKey"`
+	Milvus      struct {
+		Address  string `yaml:"address"`
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	} `yaml:"milvus"`
 }
 
 func ParseConfig(path string) (*Config, error) {

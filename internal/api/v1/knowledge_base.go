@@ -5,6 +5,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -79,6 +80,40 @@ func (k *KnowledgeBaseHandler) Upload(c *gin.Context) {
 	c.JSON(200, common.NewSuccessResponse(nil))
 }
 
+func (k *KnowledgeBaseHandler) BatchUpload(c *gin.Context) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		panic(err)
+	}
+	kbIdParam := form.Value["kbId"]
+	kbId, err := strconv.ParseInt(kbIdParam[0], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	files := make([]*model.KnowledgeBaseFile, 0, len(form.File))
+	data := make([]io.Reader, 0, len(files))
+	for _, headers := range form.File {
+		header := headers[0]
+		file := &model.KnowledgeBaseFile{
+			Name:   header.Filename,
+			Length: header.Size,
+			KbId:   kbId,
+		}
+		reader, err := header.Open()
+		if err != nil {
+			panic(err)
+		}
+		data = append(data, reader)
+		files = append(files, file)
+	}
+	n, err := k.service.BatchUploadFile(c, files, data)
+	if err != nil {
+		c.JSON(200, common.NewErrorResponseWithData(err.Error(), n))
+		return
+	}
+	c.JSON(200, common.NewSuccessResponse(n))
+}
+
 func (k *KnowledgeBaseHandler) ListFiles(c *gin.Context) {
 	var query model.KbFileQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -108,19 +143,6 @@ func (k *KnowledgeBaseHandler) Delete(c *gin.Context) {
 	c.JSON(200, common.NewSuccessResponse(nil))
 }
 
-func (k *KnowledgeBaseHandler) GetFileProcessOptions(c *gin.Context) {
-	param := c.Param("id")
-	id, err := strconv.ParseInt(param, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	options, err := k.service.GetFileProcessOptions(c, id)
-	if err != nil {
-		panic(err)
-	}
-	c.JSON(200, common.NewSuccessResponse(options))
-}
-
 func (k *KnowledgeBaseHandler) DownloadFile(c *gin.Context) {
 	param := c.Param("id")
 	id, err := strconv.ParseInt(param, 10, 64)
@@ -137,18 +159,6 @@ func (k *KnowledgeBaseHandler) DownloadFile(c *gin.Context) {
 	c.Header("Content-Type", "application/octet-stream")
 	c.Header("Access-Control-Expose-Headers", "Content-Disposition,Filename")
 	c.Data(http.StatusOK, "application/octet-stream", data)
-}
-
-func (k *KnowledgeBaseHandler) UpdateFileProcessOptions(c *gin.Context) {
-	var options model.KbFileProcessOptionsUpdateDTO
-	if err := c.ShouldBindJSON(&options); err != nil {
-		panic(err)
-	}
-	err := k.service.UpdateFileProcessOptions(c, &options)
-	if err != nil {
-		panic(err)
-	}
-	c.JSON(200, common.NewSuccessResponse(nil))
 }
 
 func (k *KnowledgeBaseHandler) StartFileProcessing(c *gin.Context) {

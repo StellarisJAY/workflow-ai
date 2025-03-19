@@ -34,6 +34,9 @@ export default {
     fullTextSearch: function(request) {
         return api.post("/knowledgeBase/fulltext-search", request);
     },
+    batchUpload: function(form) {
+        return api.postForm("/knowledgeBase/upload-batch", form);
+    },
     downloadFile: function(id) {
         api.cli.get("/knowledgeBase/download/" + id).then(resp => {
             const _res = resp.data

@@ -67,10 +67,13 @@ function listDocuments() {
 
 function uploadDocument() {
   const formData = new FormData();
-  formData.append("file", uploadFileList.value[0].originFileObj);
+  console.log(uploadFileList.value);
+  for (let k in uploadFileList.value) {
+    formData.append(k, uploadFileList.value[k].originFileObj);
+  }
   formData.append("kbId", kbId);
   uploading.value = true;
-  knowledgeBaseAPI.upload(formData).then((resp) => {
+  knowledgeBaseAPI.batchUpload(formData).then((resp) => {
     message.success("上传成功");
     uploadDrawerOpen.value = false;
     uploading.value = false;
@@ -201,7 +204,7 @@ function openDocumentChunksDrawer(id) {
               @change="listDocuments"/>
   <Drawer :open="uploadDrawerOpen" title="上传文档" @close="_=>{uploadDrawerOpen=false}">
     <Spin about="上传中" :spinning="uploading">
-      <UploadDragger :multiple="false" v-model:file-list="uploadFileList" name="file"/>
+      <UploadDragger :multiple="true" v-model:file-list="uploadFileList" name="file"/>
       <Button type="primary" @click="uploadDocument">上传</Button>
     </Spin>
   </Drawer>

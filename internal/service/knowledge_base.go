@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
@@ -95,17 +94,13 @@ func (k *KnowledgeBaseService) UploadFile(ctx context.Context, file *model.Knowl
 		file.AddUser = 1
 		file.Status = model.KbFileStatusUnavailable
 		file.Metadata = "{}"
+		file.ChunkSize = model.DefaultChunkSize
+		file.ChunkOverlap = model.DefaultChunkOverlap
+		file.Separators = model.DefaultSeparators
 		// 添加文件
 		if err := k.kbRepo.InsertFile(ctx, file); err != nil {
 			return err
 		}
-		// 创建默认的解析选项
-		options := model.DefaultKbFileProcessOptions()
-		options.FileId = file.Id
-		if err := k.kbRepo.InsertFileProcessOptions(ctx, &options); err != nil {
-			return err
-		}
-
 		// 上传文件数据
 		if err := k.fs.Upload(ctx, path, reader); err != nil {
 			return err
@@ -116,6 +111,15 @@ func (k *KnowledgeBaseService) UploadFile(ctx context.Context, file *model.Knowl
 		}
 		return nil
 	})
+}
+
+func (k *KnowledgeBaseService) BatchUploadFile(ctx context.Context, files []*model.KnowledgeBaseFile, data []io.Reader) (int, error) {
+	for i, file := range files {
+		if err := k.UploadFile(ctx, file, data[i]); err != nil {
+			return i, err
+		}
+	}
+	return len(files), nil
 }
 
 func (k *KnowledgeBaseService) ListFile(ctx context.Context, kbId int64, query *model.KbFileQuery) ([]*model.KbFileListDTO, int, error) {
@@ -139,10 +143,6 @@ func (k *KnowledgeBaseService) Delete(ctx context.Context, fileId int64) error {
 		if err := k.kbRepo.DeleteFile(ctx, fileId); err != nil {
 			return err
 		}
-		// 删除文件解析选项
-		if err := k.kbRepo.DeleteFileProcessOptions(ctx, fileId); err != nil {
-			return err
-		}
 		// 删除文件数据
 		if err := k.fs.Delete(ctx, file.Url); err != nil {
 			return err
@@ -152,7 +152,7 @@ func (k *KnowledgeBaseService) Delete(ctx context.Context, fileId int64) error {
 			return err
 		}
 		if err := vs.Delete(ctx, fileId); err != nil {
-			log.Println(err)
+			log.Printf("failed to delete vector store for fileId %d: %v", fileId, err)
 		}
 		return nil
 	})
@@ -168,23 +168,6 @@ func (k *KnowledgeBaseService) DownloadFile(ctx context.Context, fileId int64) (
 		return nil, "", err
 	}
 	return data, detail.Name, nil
-}
-
-func (k *KnowledgeBaseService) GetFileProcessOptions(ctx context.Context, fileId int64) (*model.KbFileProcessOptions, error) {
-	return k.kbRepo.GetFileProcessOptions(ctx, fileId)
-}
-
-func (k *KnowledgeBaseService) UpdateFileProcessOptions(ctx context.Context, dto *model.KbFileProcessOptionsUpdateDTO) error {
-	separators, err := json.Marshal(dto.Separators)
-	if err != nil {
-		return err
-	}
-	options := model.KbFileProcessOptions{
-		FileId:     dto.FileId,
-		ChunkSize:  dto.ChunkSize,
-		Separators: string(separators),
-	}
-	return k.kbRepo.UpdateFileProcessOptions(ctx, &options)
 }
 
 func (k *KnowledgeBaseService) ProcessFile(ctx context.Context, fileId int64) error {

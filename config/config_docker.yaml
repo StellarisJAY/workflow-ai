@@ -15,3 +15,7 @@ redis:
   host: 172.17.0.1
   port: 16379
 bochaAPIKey: abcd
+milvus:
+  address: 172.17.0.1:19530
+  username: ""
+  password: ""

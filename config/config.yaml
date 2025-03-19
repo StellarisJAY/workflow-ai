@@ -10,8 +10,12 @@ cos:
   serviceUrl: https://cos.ap-chengdu.myqcloud.com
   secretId: 1234
   secretKey: 1234
-vectorStoreType: redis
+vectorStoreType: milvus
 redis:
   host: localhost
   port: 16379
 bochaAPIKey: abcd
+milvus:
+  address: localhost:19530
+  username: ""
+  password: ""

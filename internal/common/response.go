@@ -30,3 +30,11 @@ func NewSuccessResponseWithTotal(data any, total int) *Response {
 		Total:   total,
 	}
 }
+
+func NewErrorResponseWithData(message string, data interface{}) *Response {
+	return &Response{
+		Code:    500,
+		Message: message,
+		Data:    data,
+	}
+}

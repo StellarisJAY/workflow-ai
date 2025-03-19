@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"github.com/StellrisJAY/workflow-ai/internal/common"
 	"time"
 )
@@ -47,16 +46,19 @@ func (s KbFileStatus) String() string {
 }
 
 type KnowledgeBaseFile struct {
-	Id       int64        `json:"id,string" gorm:"primary_key;column:id;type:bigint;"`
-	Name     string       `json:"name" binding:"required" gorm:"column:name;type:varchar(50);not null"`
-	KbId     int64        `json:"kbId,string" binding:"required" gorm:"column:kb_id;type:bigint;not null"`
-	AddTime  time.Time    `json:"addTime" gorm:"column:add_time;type:datetime;not null"`
-	AddUser  int64        `json:"addUser,string" gorm:"column:add_user;type:bigint;not null"`
-	Length   int64        `json:"length,string" gorm:"column:length;type:bigint;not null"` // 文件大小
-	Chunks   int64        `json:"chunks,string" gorm:"column:chunks;type:bigint;not null"` // 分片数量
-	Url      string       `json:"url" gorm:"column:url;type:varchar(255);not null"`        // 文件地址
-	Status   KbFileStatus `json:"status" gorm:"column:status;type:tinyint;not null"`
-	Metadata string       `json:"metadata" gorm:"column:metadata;type:text;not null"` // 文件元数据 kv
+	Id           int64        `json:"id,string" gorm:"primary_key;column:id;type:bigint;"`
+	Name         string       `json:"name" binding:"required" gorm:"column:name;type:varchar(50);not null"`
+	KbId         int64        `json:"kbId,string" binding:"required" gorm:"column:kb_id;type:bigint;not null"`
+	AddTime      time.Time    `json:"addTime" gorm:"column:add_time;type:datetime;not null"`
+	AddUser      int64        `json:"addUser,string" gorm:"column:add_user;type:bigint;not null"`
+	Length       int64        `json:"length,string" gorm:"column:length;type:bigint;not null"` // 文件大小
+	Chunks       int64        `json:"chunks,string" gorm:"column:chunks;type:bigint;not null"` // 分片数量
+	Url          string       `json:"url" gorm:"column:url;type:varchar(255);not null"`        // 文件地址
+	Status       KbFileStatus `json:"status" gorm:"column:status;type:tinyint;not null"`
+	Metadata     string       `json:"metadata" gorm:"column:metadata;type:text;not null"`             // 文件元数据 kv
+	Separators   string       `json:"separators" gorm:"column:separators;type:varchar(255);not null"` // 分隔符
+	ChunkSize    int          `json:"chunkSize" gorm:"column:chunk_size;type:int;not null"`           // 分片大小
+	ChunkOverlap int          `json:"chunkOverlap" gorm:"column:chunk_overlap;type:int;not null"`     // 分片重叠
 }
 
 func (KnowledgeBaseFile) TableName() string {
@@ -137,47 +139,17 @@ func (KbFileProcessTask) TableName() string {
 	return "wf_kb_file_process_task"
 }
 
-// KbFileProcessOptions 知识库文件解析选项
-type KbFileProcessOptions struct {
-	FileId     int64  `json:"fileId,string" gorm:"primary key;column:file_id;type:bigint;not null"` // 文件id
-	Separators string `json:"separators" gorm:"column:separators;type:varchar(255);not null"`       // 分隔符
-	ChunkSize  int    `json:"chunkSize" gorm:"column:chunk_size;type:int;not null"`                 // 分片大小
-}
-
 type KbFileProcessOptionsUpdateDTO struct {
-	FileId     int64    `json:"fileId,string"` // 文件id
-	Separators []string `json:"separators"`    // 分隔符
-	ChunkSize  int      `json:"chunkSize"`     // 分片大小
+	FileId       int64    `json:"fileId,string"` // 文件id
+	Separators   []string `json:"separators"`    // 分隔符
+	ChunkSize    int      `json:"chunkSize"`     // 分片大小
+	ChunkOverlap int      `json:"chunkOverlap"`
 }
 
-func (KbFileProcessOptions) TableName() string {
-	return "wf_kb_file_process_options"
-}
+var DefaultSeparators = "[\"\\n\\n\"]"
 
-var defaultSeparators = []string{
-	" ",
-	".",
-	",",
-	"\u200b", // Zero-width space
-	"\uff0c", // Fullwidth comma
-	"\u3001", // Ideographic comma
-	"\uff0e", // Fullwidth full stop
-	"\u3002", // Ideographic full stop
-	"",
-	"\n",
-	"！",
-	"？",
-	"!",
-	"?",
-}
-
-func DefaultKbFileProcessOptions() KbFileProcessOptions {
-	data, _ := json.Marshal(defaultSeparators)
-	return KbFileProcessOptions{
-		Separators: string(data),
-		ChunkSize:  512,
-	}
-}
+const DefaultChunkSize = 512
+const DefaultChunkOverlap = 20
 
 type KbFileChunk struct {
 	Id      int64 `json:"id,string" gorm:"primary_key;column:id;type:bigint;"`

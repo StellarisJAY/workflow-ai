@@ -103,9 +103,9 @@ func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId i
 }
 
 // splitDocument 拆分文档
-func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.KnowledgeBaseFile, options *model.KbFileProcessOptions) ([]schema.Document, error) {
+func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.KnowledgeBaseFile) ([]schema.Document, error) {
 	var separators []string
-	if err := json.Unmarshal([]byte(options.Separators), &separators); err != nil {
+	if err := json.Unmarshal([]byte(file.Separators), &separators); err != nil {
 		return nil, err
 	}
 	data, err := d.fs.Download(ctx, file.Url)
@@ -119,7 +119,7 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 	// TODO 不同的文件类型使用不同的 loader
 	text := documentloaders.NewText(bytes.NewReader(data))
 	splitter := textsplitter.NewMarkdownTextSplitter(textsplitter.WithSeparators(separators),
-		textsplitter.WithChunkSize(options.ChunkSize))
+		textsplitter.WithChunkSize(file.ChunkSize))
 	chunks, err := text.LoadAndSplit(ctx, splitter)
 	if err != nil {
 		return nil, err
@@ -127,6 +127,7 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 	for i, chunk := range chunks {
 		chunk.Metadata["fileId"] = file.Id
 		chunk.Metadata["order"] = i
+		chunk.Metadata["kbId"] = file.KbId
 	}
 	return chunks, nil
 }
@@ -193,10 +194,6 @@ func (d *DocumentProcessor) handleTask(ctx context.Context, taskId int64) {
 	if err != nil {
 		panic(err)
 	}
-	options, err := d.kbRepo.GetFileProcessOptions(ctx, task.FileId)
-	if err != nil {
-		panic(err)
-	}
 	// 更新到splitting状态
 	task.Status = model.KbFileProcessStatusSplitting
 	if err := d.kbRepo.UpdateFileProcessTask(ctx, task); err != nil {
@@ -206,7 +203,7 @@ func (d *DocumentProcessor) handleTask(ctx context.Context, taskId int64) {
 		panic(err)
 	}
 	// step1 加载并拆分文档
-	chunks, err := d.splitDocument(ctx, file, options)
+	chunks, err := d.splitDocument(ctx, file)
 	if err != nil {
 		panic(err)
 	}

@@ -21,6 +21,9 @@ func MakeFactory(cfg config.Config) Factory {
 	switch cfg.VectorStoreType {
 	case "redis":
 		return newRedisVectorStoreFactory(&cfg)
+	case "milvus":
+		return newMilvusVectorStoreFactory(&cfg)
+
 	default:
 		panic("unsupported vector store type: " + cfg.VectorStoreType)
 	}
