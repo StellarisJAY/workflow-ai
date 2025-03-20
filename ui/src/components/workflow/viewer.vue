@@ -12,6 +12,7 @@ import nodeConstants from './nodeConstants.js';
 import TimeUtil from "../../util/timeUtil.js";
 import NodeStatusTag from "./node/nodeStatusTag.vue";
 import fsAPI from "../../api/fs.js";
+import {parse} from "marked";
 
 const props = defineProps(['workflowId']);
 const router = useRouter();
@@ -146,10 +147,13 @@ function nodeClickHandler(event) {
     <h4 v-if="currentNodeOutput">输出变量</h4>
     <Collapse>
       <CollapsePanel v-for="(value, key) in currentNodeOutput" :key="key" :header="key">
-        <p v-if="currentNodeOutputVarTypes[key]==='string' || currentNodeOutputVarTypes[key]==='number'">{{value}}</p>
+        <!--支持markdown显示-->
+        <div v-if="currentNodeOutputVarTypes[key]==='string'" v-html="parse(value)"></div>
+        <p v-if="currentNodeOutputVarTypes[key]==='number'">{{value}}</p>
         <Collapse v-if="currentNodeOutputVarTypes[key]==='array_str' || currentNodeOutputVarTypes[key]==='array_num'">
           <CollapsePanel v-for="(item, i) in value" :header="i">
-            <p>{{item}}</p>
+            <p v-if="currentNodeOutputVarTypes[key]==='array_num'">{{item}}</p>
+            <div v-else v-html="parse(item)"></div>
           </CollapsePanel>
         </Collapse>
         <img v-if="currentNodeOutputVarTypes[key]==='image_file'" alt="key" :src="fsAPI.fileSrc(value)" width="100%"/>

@@ -56,6 +56,7 @@ func (r *Router) Init(templateHandler *TemplateHandler, workflowHandler *Workflo
 			wf.GET("/detail/:id", workflowHandler.GetDetail)
 			wf.GET("/list", workflowHandler.List)
 			wf.GET("/node/detail", workflowHandler.GetNodeInstanceDetail)
+			wf.POST("/start-and-listen", workflowHandler.StartAndListen)
 		}
 		kb := v1.Group("/knowledgeBase")
 		{

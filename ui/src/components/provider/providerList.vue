@@ -2,18 +2,19 @@
 import {useRoute, useRouter} from "vue-router";
 import {onMounted, ref} from "vue";
 import {
-  Table,
+  Button,
+  Card,
+  Collapse,
+  CollapsePanel,
+  Drawer,
   Form,
   FormItem,
   Input,
-  Select,
+  message,
   PageHeader,
-  Button,
-  Drawer,
-  CollapsePanel,
-  Collapse,
-  Card,
-  message
+  Select,
+  Spin,
+  Table
 } from "ant-design-vue";
 import providerAPI from "../../api/provider.js";
 
@@ -28,6 +29,11 @@ const modelTypes = [
   {label: "文本嵌入", value: "embedding"},
   {label: "图像理解", value: "image_understanding"},
 ]
+
+const providerCodes = [
+  {label: "OpenAI", value: "openai"},
+  {label: "通义千问", value: "tongyi"},
+]
 const router = useRouter();
 const route = useRoute();
 
@@ -40,6 +46,12 @@ const query = ref({
 
 const newProviderModel = ref({});
 const addProviderModelDrawerOpen = ref(false);
+
+const newProvider = ref({});
+const addProviderDrawerOpen = ref(false);
+const newProviderLoadingSchema = ref(false);
+const providerSchemas = ref(null);
+const newProviderCredentials = ref({});
 
 function listProviders() {
   providerAPI.listProviders(query.value).then(resp => {
@@ -79,6 +91,53 @@ function addProviderModel() {
   });
 }
 
+function openAddProviderDrawer() {
+  newProvider.value = {};
+  addProviderDrawerOpen.value = true;
+}
+
+function onProviderCodeChange() {
+  if (!providerSchemas.value) {
+    newProviderLoadingSchema.value = true;
+    providerAPI.listProviderSchemas().then(resp => {
+      providerSchemas.value = resp.data;
+      newProviderLoadingSchema.value = false;
+      const schema = providerSchemas.value.find(p=>p.code===newProvider.value.code);
+      if (schema) {
+        newProviderCredentials.value = schema["credentialSchema"];
+      }
+    });
+  }else {
+    const schema = providerSchemas.value.find(p=>p.code===newProvider.value.code);
+    if (schema) {
+      newProviderCredentials.value = schema["credentialSchema"];
+    }
+  }
+}
+
+function addProvider() {
+  for (let k in newProviderCredentials.value) {
+    if (!newProviderCredentials.value[k]) {
+      message.warn("请填写\""+k);
+      return;
+    }
+  }
+  if (!newProvider.value["code"]) {
+    message.warn("请选择供应商API类型");
+    return;
+  }
+  if (!newProvider.value["name"]) {
+    message.warn("请填写供应商名称");
+    return;
+  }
+  newProvider.value["credentials"] = JSON.stringify(newProviderCredentials.value);
+  providerAPI.addProvider(newProvider.value).then(resp => {
+    message.success("添加成功");
+    addProviderDrawerOpen.value = false;
+    listProviders();
+  });
+}
+
 onMounted(_=>{
   listProviders();
 });
@@ -87,7 +146,7 @@ onMounted(_=>{
 <template>
   <PageHeader title="模型供应商">
     <template #extra>
-      <Button>添加供应商</Button>
+      <Button @click="openAddProviderDrawer">添加供应商</Button>
     </template>
   </PageHeader>
   <Card v-for="provider in providerList" :key="provider.id" :title="provider.name" :hoverable="true">
@@ -114,6 +173,23 @@ onMounted(_=>{
       </FormItem>
     </Form>
     <Button type="primary" @click="addProviderModel">确认</Button>
+  </Drawer>
+
+  <Drawer :open="addProviderDrawerOpen" @close="_=>{addProviderDrawerOpen=false;}" :destroy-on-close="true" title="添加供应商">
+    <Form>
+      <FormItem label="供应商名称">
+        <Input v-model:value="newProvider.name"/>
+      </FormItem>
+      <FormItem label="API类型">
+        <Select v-model:value="newProvider.code" :options="providerCodes" @change="onProviderCodeChange"/>
+      </FormItem>
+      <Spin :spinning="newProviderLoadingSchema">
+        <FormItem v-for="(v, k) in newProviderCredentials" :label="k">
+          <Input v-model:value="newProviderCredentials[k]" />
+        </FormItem>
+      </Spin>
+    </Form>
+    <Button type="primary" @click="addProvider">确认</Button>
   </Drawer>
 </template>
 

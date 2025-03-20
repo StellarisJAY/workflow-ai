@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/StellrisJAY/workflow-ai/internal/ai"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/repo"
@@ -14,6 +15,7 @@ import (
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/textsplitter"
 	"log"
+	"path"
 	"time"
 )
 
@@ -102,6 +104,25 @@ func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId i
 	return vectorStore.ListChunks(ctx, fileId, true, page, pageSize)
 }
 
+func loadDocument(file *model.KnowledgeBaseFile, data []byte) (documentloaders.Loader, error) {
+	ext := path.Ext(file.Name)
+	reader := bytes.NewReader(data)
+	var loader documentloaders.Loader
+	switch ext {
+	case ".pdf":
+		loader = documentloaders.NewPDF(reader, file.Length)
+	case ".docx", ".doc":
+		return nil, errors.New("暂不支持word文档")
+	case ".txt", ".md", ".xml", ".yaml":
+		loader = documentloaders.NewText(reader)
+	case ".html", ".htm", ".htmx":
+		loader = documentloaders.NewHTML(reader)
+	default:
+		return nil, errors.New("暂不支持该文件类型")
+	}
+	return loader, nil
+}
+
 // splitDocument 拆分文档
 func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.KnowledgeBaseFile) ([]schema.Document, error) {
 	var separators []string
@@ -116,11 +137,15 @@ func (d *DocumentProcessor) splitDocument(ctx context.Context, file *model.Knowl
 	if err := json.Unmarshal([]byte(file.Metadata), &metadata); err != nil {
 		return nil, err
 	}
-	// TODO 不同的文件类型使用不同的 loader
-	text := documentloaders.NewText(bytes.NewReader(data))
-	splitter := textsplitter.NewMarkdownTextSplitter(textsplitter.WithSeparators(separators),
-		textsplitter.WithChunkSize(file.ChunkSize))
-	chunks, err := text.LoadAndSplit(ctx, splitter)
+	loader, err := loadDocument(file, data)
+	if err != nil {
+		return nil, err
+	}
+	splitter := textsplitter.NewRecursiveCharacter(
+		textsplitter.WithSeparators(separators),
+		textsplitter.WithChunkSize(file.ChunkSize),
+		textsplitter.WithChunkOverlap(file.ChunkOverlap))
+	chunks, err := loader.LoadAndSplit(ctx, splitter)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +199,11 @@ func (d *DocumentProcessor) handleTask(ctx context.Context, taskId int64) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			err := r.(error)
+			err, ok := r.(error)
+			if !ok {
+				log.Println("handleTask err:", r)
+				return
+			}
 			task.Status = model.KbFileProcessStatusFailed
 			task.Error = err.Error()
 			task.CompleteTime = time.Now()

@@ -9,5 +9,11 @@ export default {
     },
     addProviderModel: function(pm) {
         return api.post("/provider/model/create", pm);
+    },
+    listProviderSchemas: function() {
+        return api.get("/provider/schemas");
+    },
+    addProvider: function(p) {
+        return api.post("/provider/create", p);
     }
 }

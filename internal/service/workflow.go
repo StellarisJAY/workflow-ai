@@ -37,7 +37,21 @@ func (w *WorkflowService) Start(ctx context.Context, request *model.StartWorkflo
 		}
 		definition = detail.Data
 	}
-	return w.engine.Start(ctx, definition, request.TemplateId, 1, request.Inputs)
+	return w.engine.Start(ctx, definition, request.TemplateId, 1, request.Inputs, nil)
+}
+
+func (w *WorkflowService) StartWithMessageChan(ctx context.Context, request *model.StartWorkflowRequest,
+	msgChan chan model.WorkflowExecuteMessage) error {
+	detail, err := w.templateRepo.GetDetail(ctx, request.TemplateId)
+	if detail == nil {
+		return errors.New("template not found")
+	}
+	if err != nil {
+		return err
+	}
+	definition := detail.Data
+	_, err = w.engine.Start(ctx, definition, request.TemplateId, 1, request.Inputs, msgChan)
+	return err
 }
 
 func (w *WorkflowService) ListWorkflowInstance(ctx context.Context, query model.WorkflowInstanceQuery) ([]*model.WorkflowInstanceListDTO, int, error) {

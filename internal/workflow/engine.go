@@ -13,6 +13,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"log"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -26,26 +27,29 @@ type Engine struct {
 	conf         *config.Config
 	fileRepo     *repo.FileRepo
 	fileStore    fs.FileStore
+
+	instanceMsgChan sync.Map
 }
 
 func NewEngine(instanceRepo *repo.InstanceRepo, modelRepo *repo.ProviderRepo, snowflake *snowflake.Node,
 	tm *repo.TransactionManager, kbRepo *repo.KnowledgeBaseRepo, rag *rag.DocumentProcessor, conf *config.Config,
 	fileRepo *repo.FileRepo, fileStore fs.FileStore) *Engine {
 	return &Engine{
-		instanceRepo: instanceRepo,
-		tm:           tm,
-		snowflake:    snowflake,
-		modelRepo:    modelRepo,
-		kbRepo:       kbRepo,
-		rag:          rag,
-		conf:         conf,
-		fileRepo:     fileRepo,
-		fileStore:    fileStore,
+		instanceRepo:    instanceRepo,
+		tm:              tm,
+		snowflake:       snowflake,
+		modelRepo:       modelRepo,
+		kbRepo:          kbRepo,
+		rag:             rag,
+		conf:            conf,
+		fileRepo:        fileRepo,
+		fileStore:       fileStore,
+		instanceMsgChan: sync.Map{},
 	}
 }
 
 func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, addUser int64,
-	input map[string]any) (int64, error) {
+	input map[string]any, msgChan chan model.WorkflowExecuteMessage) (int64, error) {
 	var definition model.WorkflowDefinition
 	if err := json.Unmarshal([]byte(defJSON), &definition); err != nil {
 		return 0, fmt.Errorf("invalid workflow definition")
@@ -100,6 +104,9 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	})
 	if err != nil {
 		return 0, err
+	}
+	if msgChan != nil {
+		e.instanceMsgChan.Store(instance.Id, msgChan)
 	}
 	e.stepWorkflow(ctx, startNode, instance.Id)
 	return instance.Id, nil
@@ -216,6 +223,18 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 		e.executeOCRNode(context.TODO(), node, nodeInstance, nodeData, inputMap)
 	}
 	if nodeInstance.Status != model.NodeInstanceStatusFailed {
+		msgChan, ok := e.instanceMsgChan.Load(nodeInstance.WorkflowId)
+		if ok {
+			msgChan.(chan model.WorkflowExecuteMessage) <- model.WorkflowExecuteMessage{
+				NodeId:             node.Id,
+				NodeStatus:         nodeInstance.Status,
+				NodeStatusName:     nodeInstance.Status.String(),
+				WorkflowStatus:     model.WorkflowInstanceStatusRunning,
+				WorkflowStatusName: model.WorkflowInstanceStatusRunning.String(),
+				Output:             nodeInstance.Output,
+				Error:              nodeInstance.Error,
+			}
+		}
 		// 条件节点已经推进了流程，不需要再执行后续节点
 		if nodeInstance.Type != model.NodeTypeCondition {
 			e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
@@ -309,6 +328,20 @@ func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInsta
 	nodeInstance.Output = string(outputData)
 	nodeInstance.CompleteTime = time.Now()
 	nodeInstance.Status = model.NodeInstanceStatusCompleted
+	msgChan, ok := e.instanceMsgChan.LoadAndDelete(nodeInstance.WorkflowId)
+	if ok {
+		msgChan.(chan model.WorkflowExecuteMessage) <- model.WorkflowExecuteMessage{
+			NodeId:             node.Id,
+			NodeStatus:         nodeInstance.Status,
+			NodeStatusName:     nodeInstance.Status.String(),
+			WorkflowStatus:     model.WorkflowInstanceStatusCompleted,
+			WorkflowStatusName: model.WorkflowInstanceStatusCompleted.String(),
+			Output:             nodeInstance.Output,
+			Error:              nodeInstance.Error,
+		}
+		close(msgChan.(chan model.WorkflowExecuteMessage))
+	}
+
 	if err := e.instanceRepo.UpdateNodeInstance(ctx, nodeInstance); err != nil {
 		panic(err)
 	}

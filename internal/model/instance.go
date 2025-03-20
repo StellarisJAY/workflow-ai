@@ -154,3 +154,15 @@ type NodeInstanceOutputVariable struct {
 	Type  VariableType `json:"type"`
 	Value any          `json:"value"`
 }
+
+type WorkflowExecuteMessage struct {
+	NodeId             string                 `json:"nodeId"`
+	NodeStatus         NodeInstanceStatus     `json:"nodeStatus"`
+	NodeStatusName     string                 `json:"nodeStatusName"`
+	Output             string                 `json:"output"`
+	Error              string                 `json:"error"`
+	WorkflowStatus     WorkflowInstanceStatus `json:"workflowStatus"`
+	WorkflowStatusName string                 `json:"workflowStatusName"`
+
+	StreamChatContent string `json:"streamChatContent"`
+}

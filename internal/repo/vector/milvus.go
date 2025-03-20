@@ -92,6 +92,10 @@ func (m *MilvusVectorStore) createDatabase() error {
 }
 
 func (m *MilvusVectorStore) createCollection(dim int64) error {
+	c, _ := m.client.DescribeCollection(context.Background(), milvusclient.NewDescribeCollectionOption(milvusStoreCollectionName))
+	if c != nil {
+		return nil
+	}
 	// 创建collection定义
 	fileIdField := entity.NewField().WithName("file_id").WithDataType(entity.FieldTypeInt64)
 	chunkId := entity.NewField().WithName("chunk_id").WithDataType(entity.FieldTypeInt64).WithIsAutoID(true).WithIsPrimaryKey(true)
@@ -99,7 +103,7 @@ func (m *MilvusVectorStore) createCollection(dim int64) error {
 	embeddingField := entity.NewField().WithName("embedding").WithDataType(entity.FieldTypeFloatVector).WithDim(dim)
 	// 在chunkData字段上做全文搜索索引
 	chunkDataField := entity.NewField().WithName("chunk_data").WithDataType(entity.FieldTypeVarChar).
-		WithMaxLength(4096).WithEnableAnalyzer(true)
+		WithMaxLength(4096)
 	m.schema = entity.NewSchema().WithName(milvusStoreCollectionName).
 		WithDescription("kb documents").
 		WithField(fileIdField).
@@ -185,7 +189,7 @@ func (m *MilvusVectorStore) AddDocuments(ctx context.Context, docs []schema.Docu
 }
 
 func (m *MilvusVectorStore) FulltextSearch(ctx context.Context, query string, n int) ([]*model.KbSearchReturnDocument, error) {
-	panic("implement me")
+	panic("not implemented")
 }
 
 func (m *MilvusVectorStore) ListChunks(ctx context.Context, fileId int64, paged bool, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {

@@ -1,10 +1,13 @@
 package v1
 
 import (
+	"encoding/json"
 	"github.com/StellrisJAY/workflow-ai/internal/common"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
 	"github.com/StellrisJAY/workflow-ai/internal/service"
 	"github.com/gin-gonic/gin"
+	"io"
+	"log"
 	"strconv"
 )
 
@@ -81,4 +84,35 @@ func (w *WorkflowHandler) GetWorkflowTimeline(c *gin.Context) {
 		panic(err)
 	}
 	c.JSON(200, common.NewSuccessResponse(timeline))
+}
+
+func (w *WorkflowHandler) StartAndListen(c *gin.Context) {
+	var request model.StartWorkflowRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		panic(err)
+	}
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+
+	done := c.Request.Context().Done()
+	msgChan := make(chan model.WorkflowExecuteMessage)
+	if err := w.service.StartWithMessageChan(c, &request, msgChan); err != nil {
+		panic(err)
+	}
+	c.Stream(func(w io.Writer) bool {
+		for {
+			select {
+			case <-done:
+				log.Println("client closed connection")
+				return true
+			case msg, ok := <-msgChan:
+				if !ok {
+					return false
+				}
+				data, _ := json.Marshal(msg)
+				c.SSEvent("message", string(data))
+			}
+		}
+	})
 }
