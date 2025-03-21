@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/StellrisJAY/workflow-ai/internal/config"
 	"github.com/StellrisJAY/workflow-ai/internal/model"
+	"github.com/milvus-io/milvus/client/v2/column"
 	"github.com/milvus-io/milvus/client/v2/entity"
 	"github.com/milvus-io/milvus/client/v2/index"
 	"github.com/milvus-io/milvus/client/v2/milvusclient"
@@ -101,21 +102,36 @@ func (m *MilvusVectorStore) createCollection(dim int64) error {
 	chunkId := entity.NewField().WithName("chunk_id").WithDataType(entity.FieldTypeInt64).WithIsAutoID(true).WithIsPrimaryKey(true)
 	kbIdFiled := entity.NewField().WithName("kb_id").WithDataType(entity.FieldTypeInt64)
 	embeddingField := entity.NewField().WithName("embedding").WithDataType(entity.FieldTypeFloatVector).WithDim(dim)
-	// 在chunkData字段上做全文搜索索引
+	// 在chunkData字段上做全文搜索索引 倒排索引： 词->文档
 	chunkDataField := entity.NewField().WithName("chunk_data").WithDataType(entity.FieldTypeVarChar).
-		WithMaxLength(4096)
+		WithMaxLength(4096).WithEnableAnalyzer(true).WithEnableMatch(true).
+		WithAnalyzerParams(map[string]any{"tokenizer": "jieba"}) // 设置中文分词器
+	// 创建稀疏向量字段，用于全文搜索
+	sparseField := entity.NewField().WithName("sparse_vector").WithDataType(entity.FieldTypeSparseVector)
+	// 创建BM25函数，将chunk_data转换成稀疏向量
+	bm25Function := entity.NewFunction().WithName("bm25").
+		WithType(entity.FunctionTypeBM25).
+		WithInputFields("chunk_data").
+		WithOutputFields("sparse_vector")
+
 	m.schema = entity.NewSchema().WithName(milvusStoreCollectionName).
 		WithDescription("kb documents").
 		WithField(fileIdField).
 		WithField(kbIdFiled).
 		WithField(embeddingField).
 		WithField(chunkDataField).
-		WithField(chunkId)
+		WithField(chunkId).
+		WithField(sparseField).
+		WithFunction(bm25Function)
 	// 创建相似度搜索索引
-	embeddingIdx := milvusclient.NewCreateIndexOption(milvusStoreCollectionName, "embedding", index.NewAutoIndex(entity.COSINE))
+	embeddingIndex := milvusclient.NewCreateIndexOption(milvusStoreCollectionName, "embedding",
+		index.NewAutoIndex(entity.IP))
+	// 创建BM25索引
+	sparseIndex := milvusclient.NewCreateIndexOption(milvusStoreCollectionName, "sparse_vector",
+		index.NewSparseInvertedIndex(entity.BM25, 0.2))
 	err := m.client.CreateCollection(context.Background(),
 		milvusclient.NewCreateCollectionOption(milvusStoreCollectionName, m.schema).
-			WithIndexOptions(embeddingIdx))
+			WithIndexOptions(embeddingIndex, sparseIndex))
 	if err != nil {
 		return err
 	}
@@ -147,6 +163,7 @@ func (m *MilvusVectorStore) SimilaritySearch(ctx context.Context, query string, 
 	option := milvusclient.NewSearchOption(milvusStoreCollectionName, n, vectors).
 		WithFilter(fmt.Sprintf("kb_id == %d", m.kbId)).
 		WithAnnParam(idxParam).
+		WithANNSField("embedding"). // 指定相似度搜索的字段
 		WithOutputFields("file_id", "chunk_data", "chunk_id")
 	result, err := m.client.Search(context.Background(), option)
 	if err != nil {
@@ -170,26 +187,75 @@ func (m *MilvusVectorStore) AddDocuments(ctx context.Context, docs []schema.Docu
 	if err := m.init(int64(len(vectors[0]))); err != nil {
 		return nil, err
 	}
-	rows := make([]any, len(docs))
 	for i, doc := range docs {
-		rows[i] = map[string]any{
-			"file_id":    doc.Metadata["fileId"],
-			"kb_id":      doc.Metadata["kbId"],
-			"embedding":  entity.FloatVector(vectors[i]),
-			"chunk_data": doc.PageContent,
+		embedding := entity.FloatVector(vectors[i])
+		columns := []column.Column{
+			column.NewColumnInt64("file_id", []int64{doc.Metadata["fileId"].(int64)}),
+			column.NewColumnInt64("kb_id", []int64{doc.Metadata["kbId"].(int64)}),
+			column.NewColumnFloatVector("embedding", embedding.Dim(), [][]float32{vectors[i]}),
+			column.NewColumnVarChar("chunk_data", []string{doc.PageContent}),
 		}
-
-	}
-	option := milvusclient.NewRowBasedInsertOption(milvusStoreCollectionName, rows...)
-	_, err = m.client.Insert(ctx, option)
-	if err != nil {
-		return nil, err
+		option := milvusclient.NewColumnBasedInsertOption(milvusStoreCollectionName, columns...)
+		_, err := m.client.Insert(ctx, option)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
 
 func (m *MilvusVectorStore) FulltextSearch(ctx context.Context, query string, n int) ([]*model.KbSearchReturnDocument, error) {
-	panic("not implemented")
+	if err := m.client.UseDatabase(ctx, milvusclient.NewUseDatabaseOption(milvusStoreDbName)); err != nil {
+		return nil, err
+	}
+	indexParam := index.NewSparseAnnParam()
+	indexParam.WithRadius(0.5)
+	// query以Varchar类型传入，会经过数据库的bm25函数转换成稀疏向量，然后在稀疏向量索引上搜索
+	option := milvusclient.NewSearchOption(milvusStoreCollectionName, n, []entity.Vector{entity.Text(query)}).
+		WithFilter(fmt.Sprintf("kb_id == %d", m.kbId)).
+		WithAnnParam(indexParam).
+		WithANNSField("sparse_vector"). // 利用稀疏向量进行全文搜索
+		WithOutputFields("file_id", "chunk_data", "chunk_id")
+	result, err := m.client.Search(context.Background(), option)
+	if err != nil {
+		return nil, err
+	}
+	return m.convertSearchResult(result)
+}
+
+func (m *MilvusVectorStore) HybridSearch(ctx context.Context, query string, n int, threshold float32,
+	denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error) {
+	if err := m.client.UseDatabase(ctx, milvusclient.NewUseDatabaseOption(milvusStoreDbName)); err != nil {
+		return nil, err
+	}
+	queryVector, err := m.embedder.EmbedQuery(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	filter := fmt.Sprintf("kb_id == %d", m.kbId)
+	// 全文搜索配置
+	sparseAnnParam := index.NewSparseAnnParam()
+	sparseAnnParam.WithRadius(0.5)
+	sparseRequest := milvusclient.NewAnnRequest("sparse_vector", n, entity.Text(query)).
+		WithFilter(filter).WithAnnParam(sparseAnnParam).WithANNSField("sparse_vector")
+	// 相似度搜索配置
+	denseParams := index.NewHNSWAnnParam(100)
+	denseParams.WithRadius(float64(threshold))
+	denseRequest := milvusclient.NewAnnRequest("embedding", n, entity.FloatVector(queryVector)).
+		WithAnnParam(denseParams).
+		WithFilter(filter)
+	// 权重reranker，将全文搜索和相似度搜索的结果进行加权融合
+	reranker := milvusclient.NewWeightedReranker([]float64{sparseWeight, denseWeight})
+
+	option := milvusclient.NewHybridSearchOption(milvusStoreCollectionName, n, sparseRequest, denseRequest).
+		WithReranker(reranker).
+		WithOutputFields("file_id", "chunk_data", "chunk_id")
+
+	result, err := m.client.HybridSearch(ctx, option)
+	if err != nil {
+		return nil, err
+	}
+	return m.convertSearchResult(result)
 }
 
 func (m *MilvusVectorStore) ListChunks(ctx context.Context, fileId int64, paged bool, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {
@@ -197,16 +263,31 @@ func (m *MilvusVectorStore) ListChunks(ctx context.Context, fileId int64, paged 
 		return nil, 0, err
 	}
 	expr := fmt.Sprintf("file_id == %d", fileId)
+
 	option := milvusclient.NewQueryOption(milvusStoreCollectionName).
 		WithOutputFields("file_id", "chunk_data", "chunk_id").
 		WithFilter(expr)
-	// TODO 分页
+	total := 0
+	// 分页查询，获取总数
+	if paged {
+		option = option.WithOffset((page - 1) * pageSize).WithLimit(pageSize)
+		// 不指定outputFields，只获取总数
+		totalOption := milvusclient.NewQueryOption(milvusStoreCollectionName).WithFilter(expr)
+		res, err := m.client.Query(ctx, totalOption)
+		if err != nil {
+			return nil, 0, err
+		}
+		total = res.ResultCount
+	}
 	results, err := m.client.Query(ctx, option)
 	if err != nil {
 		return nil, 0, err
 	}
+	if !paged {
+		total = results.ResultCount
+	}
 	chunks, err := m.convertSearchResult([]milvusclient.ResultSet{results})
-	return chunks, len(chunks), err
+	return chunks, total, err
 }
 
 func (m *MilvusVectorStore) Delete(ctx context.Context, fileId int64) error {

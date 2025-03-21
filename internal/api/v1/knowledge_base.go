@@ -197,6 +197,18 @@ func (k *KnowledgeBaseHandler) FulltextSearch(c *gin.Context) {
 	c.JSON(200, common.NewSuccessResponse(result))
 }
 
+func (k *KnowledgeBaseHandler) HybridSearch(c *gin.Context) {
+	var request model.KbSearchRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		panic(err)
+	}
+	result, err := k.service.HybridSearch(c, &request)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(result))
+}
+
 func (k *KnowledgeBaseHandler) ListChunks(c *gin.Context) {
 	var request model.ListChunksRequest
 	if err := c.ShouldBindQuery(&request); err != nil {

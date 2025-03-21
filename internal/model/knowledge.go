@@ -166,6 +166,8 @@ type KbSearchRequest struct {
 	Input          string  `json:"input"`
 	ScoreThreshold float32 `json:"scoreThreshold"`
 	Count          int     `json:"count"`
+	DenseWeight    float64 `json:"denseWeight"`
+	SparseWeight   float64 `json:"sparseWeight"`
 }
 
 type KbSearchReturnDocument struct {

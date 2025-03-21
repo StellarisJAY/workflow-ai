@@ -6,10 +6,15 @@ import {kbSearchTypes} from "../../../api/const.js";
 import {onMounted, ref} from "vue";
 import knowledgeBaseAPI from "../../../api/knowledgeBase.js";
 
-defineProps(['node']);
+const props = defineProps(['node']);
 
 const kbList = ref([]);
 const kbOptions = ref([]);
+
+const weightSliderMarks = ref({
+  0: "语义 0.5",
+  1: "0.5 关键词"
+});
 
 onMounted(()=>{
   knowledgeBaseAPI.list({paged: false}).then(resp=>{
@@ -21,6 +26,14 @@ onMounted(()=>{
     kbOptions.value = options;
   });
 });
+
+function onWeightSliderChange(ev) {
+  const nodeData = props.node.data["retrieveKnowledgeBaseNodeData"];
+  nodeData.sparseWeight = Math.round((1 - ev)*10) / 10;
+  nodeData.denseWeight = ev;
+  weightSliderMarks.value[0] = nodeData.denseWeight+" 语义";
+  weightSliderMarks.value[1] = nodeData.sparseWeight+" 关键词";
+}
 
 </script>
 
@@ -38,6 +51,18 @@ onMounted(()=>{
     </FormItem>
     <FormItem label="最大返回文档数量">
       <InputNumber :min="1" v-model:value="node.data['retrieveKnowledgeBaseNodeData']['count']"/>
+    </FormItem>
+    <FormItem label="混合搜索权重" v-if="node.data['retrieveKnowledgeBaseNodeData']['searchType']==='hybrid'">
+      <Slider :marks="weightSliderMarks"
+              :value="node.data['retrieveKnowledgeBaseNodeData'].denseWeight"
+              :min="0"
+              :max="1"
+              :step="0.1"
+              @change="onWeightSliderChange">
+        <template #mark="{label, point}">
+          {{label}}
+        </template>
+      </Slider>
     </FormItem>
   </Form>
   <VariableTable :node-id="node.id"

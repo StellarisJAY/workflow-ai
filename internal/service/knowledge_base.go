@@ -242,6 +242,23 @@ func (k *KnowledgeBaseService) FulltextSearch(ctx context.Context, request *mode
 	return result, nil
 }
 
+func (k *KnowledgeBaseService) HybridSearch(ctx context.Context, request *model.KbSearchRequest) (*model.KbSearchResult, error) {
+	documents, err := k.processor.HybridSearch(ctx, request.KbId, request.Input, request.Count,
+		request.ScoreThreshold, request.DenseWeight, request.SparseWeight)
+	if err != nil {
+		return nil, err
+	}
+	files, err := k.findReferencedFiles(ctx, documents)
+	if err != nil {
+		return nil, err
+	}
+	result := &model.KbSearchResult{
+		Documents: documents,
+		Files:     files,
+	}
+	return result, nil
+}
+
 func (k *KnowledgeBaseService) ListChunks(ctx context.Context, request *model.ListChunksRequest) ([]*model.KbSearchReturnDocument, int, error) {
 	return k.processor.ListChunks(ctx, request.KbId, request.FileId, request.Page, request.PageSize)
 }

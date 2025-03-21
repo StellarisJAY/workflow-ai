@@ -33,7 +33,7 @@ type KbSearchType string
 const (
 	KbSearchTypeSimilarity KbSearchType = "similarity" // 语义搜索
 	KbSearchTypeFulltext   KbSearchType = "fulltext"   // 全文搜索
-	KbSearchTypeMixed      KbSearchType = "mixed"      // 混合搜索
+	KbSearchTypeHybrid     KbSearchType = "hybrid"     // 混合搜索
 )
 
 type Node struct {
@@ -122,7 +122,8 @@ type RetrieveKnowledgeBaseNodeData struct {
 	SearchType          KbSearchType `json:"searchType"`          // 搜索类型
 	Count               int          `json:"count"`               // 返回最大数量
 	SimilarityThreshold float32      `json:"similarityThreshold"` // 相似度阈值
-	OptimizeQuery       bool         `json:"optimizeQuery"`       // 是否优化用户输入
+	DenseWeight         float64      `json:"denseWeight"`         // 相似度搜索权重
+	SparseWeight        float64      `json:"sparseWeight"`        // 全文搜索权重
 }
 
 type StartNodeData struct {
@@ -249,7 +250,8 @@ var KbRetrievalNodePrototype = &Node{
 			SearchType:          KbSearchTypeSimilarity,
 			Count:               10,
 			SimilarityThreshold: 0.8,
-			OptimizeQuery:       false,
+			DenseWeight:         0.5,
+			SparseWeight:        0.5,
 		},
 	},
 }

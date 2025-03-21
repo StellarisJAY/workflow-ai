@@ -95,6 +95,36 @@ func (d *DocumentProcessor) FulltextSearch(ctx context.Context, kbId int64, inpu
 	return documents, nil
 }
 
+func (d *DocumentProcessor) HybridSearch(ctx context.Context, kbId int64, input string, n int, scoreThreshold float32,
+	denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error) {
+	kb, err := d.kbRepo.Detail(ctx, kbId)
+	if err != nil {
+		return nil, err
+	}
+	detail, err := d.modelRepo.GetProviderModelDetail(ctx, kb.EmbeddingModel)
+	if err != nil {
+		return nil, err
+	}
+	embeddingModel, err := ai.MakeEmbeddingModel(detail)
+	if err != nil {
+		return nil, err
+	}
+	embedder, err := embeddings.NewEmbedder(embeddingModel, embeddings.WithBatchSize(20))
+	if err != nil {
+		return nil, err
+	}
+	vectorStore, err := d.vectorStoreFactory.MakeVectorStore(ctx, kbId, embedder)
+	if err != nil {
+		return nil, err
+	}
+	defer vectorStore.Close()
+	documents, err := vectorStore.HybridSearch(ctx, input, n, scoreThreshold, denseWeight, sparseWeight)
+	if err != nil {
+		return nil, err
+	}
+	return documents, nil
+}
+
 func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId int64, page int, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {
 	vectorStore, err := d.vectorStoreFactory.MakeVectorStore(ctx, kbId, nil)
 	if err != nil {

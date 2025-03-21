@@ -13,4 +13,5 @@ export const llmAPITypeOptions = [
 export const kbSearchTypes = [
     {label: "语义搜索", value: "similarity"},
     {label: "全文搜索", value: "fulltext"},
+    {label: "混合搜索", value: "hybrid"},
 ];

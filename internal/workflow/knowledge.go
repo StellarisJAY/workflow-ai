@@ -27,13 +27,16 @@ func (e *Engine) executeKnowledgeRetrieveNode(ctx context.Context, node *model.N
 	case model.KbSearchTypeFulltext:
 		// 全文检索
 		result, err = e.rag.FulltextSearch(ctx, nodeData.KbId, query.(string), nodeData.Count)
+	case model.KbSearchTypeHybrid:
+		// 混合检索
+		result, err = e.rag.HybridSearch(ctx, nodeData.KbId, query.(string), nodeData.Count, nodeData.SimilarityThreshold,
+			nodeData.DenseWeight, nodeData.SparseWeight)
 	default:
 		panic(errors.New("unknown search type"))
 	}
 	if err != nil {
 		panic(err)
 	}
-	// TODO 输出格式转换
 	output := make(map[string]any)
 	output["total"] = strconv.Itoa(len(result))
 	documents := make([]string, len(result))

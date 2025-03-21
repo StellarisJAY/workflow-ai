@@ -2,7 +2,7 @@
 import {
   Form, FormItem, Button,
   Textarea, Card, Row, Col, Slider, InputNumber, message, Divider,
-  Collapse, CollapsePanel, Select
+  Collapse, CollapsePanel, Select,
 } from "ant-design-vue";
 import {ref} from "vue";
 import knowledgeBaseAPI from "../../api/knowledgeBase.js";
@@ -12,11 +12,18 @@ import {kbSearchTypes} from "../../api/const.js";
 const route = useRoute()
 const kbId = route.params["id"];
 
+const weightSliderMarks = ref({
+  0: "语义 0.5",
+  1: "0.5 关键词"
+});
+
 const searchRequest = ref({
   scoreThreshold: 0.5,
   count: 10,
   input: "",
-  kbId: kbId
+  kbId: kbId,
+  denseWeight: 0.5,
+  sparseWeight: 0.5,
 });
 const searchResult = ref([]);
 const activeKey = ref("0");
@@ -39,10 +46,24 @@ function fulltextSearch() {
   })
 }
 
+function hybridSearch() {
+  knowledgeBaseAPI.hybridSearch(searchRequest.value).then((resp) => {
+    searchResult.value = resp.data;
+  }).catch((err) => {
+    message.error("搜索失败");
+  })
+}
+
 function downloadFile(id) {
   knowledgeBaseAPI.downloadFile(id);
 }
 
+function onWeightSliderChange(ev) {
+  searchRequest.value.sparseWeight = Math.round((1 - ev)*10) / 10;
+  searchRequest.value.denseWeight = ev;
+  weightSliderMarks.value[0] = searchRequest.value.denseWeight+" 语义";
+  weightSliderMarks.value[1] = searchRequest.value.sparseWeight+" 关键词";
+}
 </script>
 
 <template>
@@ -53,11 +74,18 @@ function downloadFile(id) {
           <FormItem label="搜索方式">
             <Select :options="kbSearchTypes" v-model:value="searchOption"/>
           </FormItem>
-          <FormItem label="相似度阈值" v-if="searchOption==='similarity'">
+          <FormItem label="相似度阈值" v-if="searchOption==='similarity' || searchOption==='hybrid'">
             <Slider v-model:value="searchRequest.scoreThreshold" :min="0.01" :max="0.99" :step="0.01"/>
           </FormItem>
           <FormItem label="最大返回数量">
             <InputNumber v-model:value="searchRequest.count" :min="1"/>
+          </FormItem>
+          <FormItem label="混合搜索权重" v-if="searchOption==='hybrid'">
+            <Slider :marks="weightSliderMarks" :value="searchRequest.denseWeight" :min="0" :max="1" :step="0.1" @change="onWeightSliderChange">
+              <template #mark="{label}">
+                {{label}}
+              </template>
+            </Slider>
           </FormItem>
           <FormItem label="搜索内容">
             <Textarea v-model:value="searchRequest.input" style="height: 300px"/>
@@ -65,6 +93,7 @@ function downloadFile(id) {
         </Form>
         <Button v-if="searchOption==='similarity'" type="primary" @click="similaritySearch">搜索</Button>
         <Button v-if="searchOption==='fulltext'" type="primary" @click="fulltextSearch">搜索</Button>
+        <Button v-if="searchOption==='hybrid'" type="primary" @click="hybridSearch">搜索</Button>
       </Card>
     </Col>
     <Col :span="16">

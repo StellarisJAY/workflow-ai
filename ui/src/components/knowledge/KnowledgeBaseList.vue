@@ -7,7 +7,7 @@ import {
   Drawer,
   Form,
   PageHeader,
-  Pagination, FormItem, Input, Textarea, Select, message,
+  Pagination, FormItem, Input, Textarea, Select, message,Spin
 } from "ant-design-vue";
 import {onMounted, ref} from "vue";
 import llmAPI from '../../api/llm.js';
@@ -28,6 +28,8 @@ const newKnowledgeBase = ref({});
 const createKBDrawerOpen = ref(false);
 const embeddingModels = ref([]);
 const router = useRouter();
+const creating = ref(false);
+
 onMounted(_=>{
   listKnowledgeBase();
 });
@@ -59,9 +61,16 @@ function listKnowledgeBase() {
 }
 
 function createKnowledgeBase() {
+  creating.value = true;
   knowledgeBaseAPI.create(newKnowledgeBase.value).then(resp=>{
     message.success("创建成功");
-  });
+    createKBDrawerOpen.value = false;
+    listKnowledgeBase();
+    creating.value = false;
+  }).catch(err=>{
+    console.log(err);
+    creating.value = false;
+  })
 }
 </script>
 
