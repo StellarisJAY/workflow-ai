@@ -11,7 +11,7 @@ onMounted(()=>{
   refOptions.value = NodeUtil.getPrevNodesOutputs(props.nodeId);
   if (!props.inputVariables) return;
   props.inputVariables.forEach(variable => {
-    if (variable.value.type === "ref") {
+    if (variable.value.type !== "literal") {
       variable['refOption'] = [variable.value.sourceNode, variable.value.sourceName];
     }
   });

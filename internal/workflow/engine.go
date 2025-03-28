@@ -108,7 +108,9 @@ func (e *Engine) Start(ctx context.Context, defJSON string, templateId int64, ad
 	if msgChan != nil {
 		e.instanceMsgChan.Store(instance.Id, msgChan)
 	}
-	e.stepWorkflow(ctx, startNode, instance.Id)
+	if err := e.stepWorkflow(ctx, startNode, instance.Id); err != nil {
+		return 0, err
+	}
 	return instance.Id, nil
 }
 
@@ -236,8 +238,10 @@ func (e *Engine) executeNode(ctx context.Context, node *model.Node, nodeInstance
 			}
 		}
 		// 条件节点已经推进了流程，不需要再执行后续节点
-		if nodeInstance.Type != model.NodeTypeCondition {
-			e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId)
+		if nodeInstance.Type != model.NodeTypeCondition && nodeInstance.Type != model.NodeTypeEnd {
+			if err := e.stepWorkflow(context.TODO(), node, nodeInstance.WorkflowId); err != nil {
+				panic(err)
+			}
 		}
 	} else {
 		e.UpdateWorkflowFailed(context.TODO(), nodeInstance.WorkflowId)
@@ -254,25 +258,24 @@ func (e *Engine) UpdateWorkflowFailed(ctx context.Context, workflowId int64) {
 	}
 }
 
-func (e *Engine) stepWorkflow(ctx context.Context, currNode *model.Node, workflowId int64) {
+func (e *Engine) stepWorkflow(ctx context.Context, currNode *model.Node, workflowId int64) error {
 	instance, err := e.instanceRepo.GetWorkflowInstance(ctx, workflowId)
 	if err != nil || instance == nil {
-		log.Println("can't find flow instance", err, workflowId)
-		return
+		return errors.New("can't find flow instance")
 	}
 	var definition model.WorkflowDefinition
 	_ = json.Unmarshal([]byte(instance.Data), &definition)
 	nextNodes := GetNextNodes(&definition, currNode)
-	e.executeNextNodes(ctx, nextNodes, &definition, workflowId)
+	return e.executeNextNodes(ctx, nextNodes, &definition, workflowId)
 }
 
 func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, definition *model.WorkflowDefinition,
-	workflowId int64) {
+	workflowId int64) error {
 	if status, err := e.instanceRepo.GetWorkflowInstanceStatus(ctx, workflowId); err != nil {
 		log.Println("get workflow instance status error:", err)
-		return
+		return errors.New("get workflow instance status error")
 	} else if status == model.WorkflowInstanceStatusCompleted || status == model.WorkflowInstanceStatusFailed {
-		return
+		return errors.New("workflow instance is in completed or failed")
 	}
 	var executableNodes []struct {
 		NodeInstance *model.NodeInstance
@@ -304,8 +307,7 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 			Error:        "",
 		}
 		if err := e.instanceRepo.InsertNodeInstance(ctx, nodeInstance); err != nil {
-			log.Println("insert node instance error", err)
-			continue
+			return err
 		}
 		executableNodes = append(executableNodes, struct {
 			NodeInstance *model.NodeInstance
@@ -316,6 +318,7 @@ func (e *Engine) executeNextNodes(ctx context.Context, nextNodes []*model.Node, 
 	for _, executableNode := range executableNodes {
 		go e.executeNode(context.Background(), executableNode.Node, executableNode.NodeInstance)
 	}
+	return nil
 }
 
 func (e *Engine) executeEndNode(ctx context.Context, node *model.Node, nodeInstance *model.NodeInstance) {
