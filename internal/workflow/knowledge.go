@@ -29,8 +29,7 @@ func (e *Engine) executeKnowledgeRetrieveNode(ctx context.Context, node *model.N
 		result, err = e.rag.FulltextSearch(ctx, nodeData.KbId, query.(string), nodeData.Count)
 	case model.KbSearchTypeHybrid:
 		// 混合检索
-		result, err = e.rag.HybridSearch(ctx, nodeData.KbId, query.(string), nodeData.Count, nodeData.SimilarityThreshold,
-			nodeData.DenseWeight, nodeData.SparseWeight)
+		result, err = e.rag.HybridSearch(ctx, nodeData.KbId, query.(string), nodeData.Count, nodeData.SimilarityThreshold, nodeData.HybridSearchOption)
 	default:
 		panic(errors.New("unknown search type"))
 	}

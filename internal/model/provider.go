@@ -11,6 +11,7 @@ const (
 	ProviderModelTypeLargeLanguageModel ProviderModelType = "llm"                 // llm
 	ProviderModelTypeEmbedding          ProviderModelType = "embedding"           // 嵌入
 	ProviderModelTypeImageUnderstanding ProviderModelType = "image_understanding" // 视觉语言
+	ProviderModelTypeTextRerank         ProviderModelType = "text_rerank"         // 文本排序
 )
 
 type ProviderCode string

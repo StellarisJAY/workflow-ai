@@ -96,7 +96,7 @@ func (d *DocumentProcessor) FulltextSearch(ctx context.Context, kbId int64, inpu
 }
 
 func (d *DocumentProcessor) HybridSearch(ctx context.Context, kbId int64, input string, n int, scoreThreshold float32,
-	denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error) {
+	option model.HybridSearchOption) ([]*model.KbSearchReturnDocument, error) {
 	kb, err := d.kbRepo.Detail(ctx, kbId)
 	if err != nil {
 		return nil, err
@@ -118,11 +118,40 @@ func (d *DocumentProcessor) HybridSearch(ctx context.Context, kbId int64, input 
 		return nil, err
 	}
 	defer vectorStore.Close()
-	documents, err := vectorStore.HybridSearch(ctx, input, n, scoreThreshold, denseWeight, sparseWeight)
+	documents, err := vectorStore.HybridSearch(ctx, input, n, scoreThreshold, option)
 	if err != nil {
 		return nil, err
 	}
+	// 使用排序模型rerank
+	if !option.WeightedRerank {
+		rerankedDocs, err := d.Rerank(ctx, input, documents, option.RerankModelId)
+		if err != nil {
+			return nil, err
+		}
+		return rerankedDocs, nil
+	}
 	return documents, nil
+}
+
+// Rerank 重排序搜索结果
+func (d *DocumentProcessor) Rerank(ctx context.Context, query string, documents []*model.KbSearchReturnDocument,
+	rerankModelId int64) ([]*model.KbSearchReturnDocument, error) {
+	rerankModel, err := d.modelRepo.GetProviderModelDetail(ctx, rerankModelId)
+	if err != nil {
+		return nil, err
+	}
+	if rerankModel.ModelType != model.ProviderModelTypeTextRerank {
+		return nil, errors.New("selected model is not a TextRerank model")
+	}
+	reranker, err := ai.MakeReranker(rerankModel.ModelName, rerankModel.ProviderCode, rerankModel.ProviderCredentials)
+	if err != nil {
+		return nil, err
+	}
+	rerankedDocs, err := reranker.Rerank(ctx, query, documents)
+	if err != nil {
+		return nil, err
+	}
+	return rerankedDocs, nil
 }
 
 func (d *DocumentProcessor) ListChunks(ctx context.Context, kbId int64, fileId int64, page int, pageSize int) ([]*model.KbSearchReturnDocument, int, error) {

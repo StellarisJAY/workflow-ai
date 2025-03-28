@@ -36,7 +36,7 @@ type Store interface {
 	// FulltextSearch 全文搜索
 	FulltextSearch(ctx context.Context, query string, n int) ([]*model.KbSearchReturnDocument, error)
 	// HybridSearch 基于权重reranker的混合搜索
-	HybridSearch(ctx context.Context, query string, n int, threshold float32, denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error)
+	HybridSearch(ctx context.Context, query string, n int, threshold float32, option model.HybridSearchOption) ([]*model.KbSearchReturnDocument, error)
 	ListChunks(ctx context.Context, fileId int64, paged bool, page, pageSize int) ([]*model.KbSearchReturnDocument, int, error)
 	Delete(ctx context.Context, fileId int64) error
 	Close()

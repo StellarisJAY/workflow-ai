@@ -46,7 +46,7 @@ func (r *RedisVectorStoreFactory) MakeVectorStore(ctx context.Context, kbId int6
 	return s, nil
 }
 
-func (r *RedisVectorStore) HybridSearch(ctx context.Context, query string, n int, threshold float32, denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error) {
+func (r *RedisVectorStore) HybridSearch(ctx context.Context, query string, n int, threshold float32, option model.HybridSearchOption) ([]*model.KbSearchReturnDocument, error) {
 	panic("not implemented")
 }
 

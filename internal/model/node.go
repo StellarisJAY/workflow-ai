@@ -118,12 +118,13 @@ type KnowledgeBaseWriteNodeData struct {
 
 // RetrieveKnowledgeBaseNodeData 检索知识库节点数据
 type RetrieveKnowledgeBaseNodeData struct {
-	KbId                int64        `json:"kbId,string"`         // 知识库ID
-	SearchType          KbSearchType `json:"searchType"`          // 搜索类型
-	Count               int          `json:"count"`               // 返回最大数量
-	SimilarityThreshold float32      `json:"similarityThreshold"` // 相似度阈值
-	DenseWeight         float64      `json:"denseWeight"`         // 相似度搜索权重
-	SparseWeight        float64      `json:"sparseWeight"`        // 全文搜索权重
+	KbId                int64              `json:"kbId,string"`         // 知识库ID
+	SearchType          KbSearchType       `json:"searchType"`          // 搜索类型
+	Count               int                `json:"count"`               // 返回最大数量
+	SimilarityThreshold float32            `json:"similarityThreshold"` // 相似度阈值
+	DenseWeight         float64            `json:"denseWeight"`         // 相似度搜索权重
+	SparseWeight        float64            `json:"sparseWeight"`        // 全文搜索权重
+	HybridSearchOption  HybridSearchOption `json:"hybridSearchOption"`  // 混合搜索选项
 }
 
 type StartNodeData struct {

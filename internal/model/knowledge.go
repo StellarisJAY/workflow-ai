@@ -162,12 +162,11 @@ func (KbFileChunk) TableName() string {
 }
 
 type KbSearchRequest struct {
-	KbId           int64   `json:"kbId,string"`
-	Input          string  `json:"input"`
-	ScoreThreshold float32 `json:"scoreThreshold"`
-	Count          int     `json:"count"`
-	DenseWeight    float64 `json:"denseWeight"`
-	SparseWeight   float64 `json:"sparseWeight"`
+	KbId               int64              `json:"kbId,string"`
+	Input              string             `json:"input"`
+	ScoreThreshold     float32            `json:"scoreThreshold"`
+	Count              int                `json:"count"`
+	HybridSearchOption HybridSearchOption `json:"hybridSearchOption"`
 }
 
 type KbSearchReturnDocument struct {
@@ -186,4 +185,12 @@ type ListChunksRequest struct {
 	KbId   int64 `json:"kbId,string" binding:"required" form:"kbId"`
 	FileId int64 `json:"fileId,string" binding:"required" form:"fileId"`
 	common.PageQuery
+}
+
+// HybridSearchOption 混合搜索选项
+type HybridSearchOption struct {
+	WeightedRerank bool    `json:"weightedRerank"`       // 是否使用权重排序，如果不是权重排序则使用排序模型
+	SparseWeight   float64 `json:"sparseWeight"`         // 关键词搜索权重
+	DenseWeight    float64 `json:"denseWeight"`          // 语义搜索权重
+	RerankModelId  int64   `json:"rerankModelId,string"` // 重排序模型ID
 }

@@ -28,6 +28,7 @@ const modelTypes = [
   {label: "大模型", value: "llm"},
   {label: "文本嵌入", value: "embedding"},
   {label: "图像理解", value: "image_understanding"},
+  {label: "文本排序", value: "text_rerank"},
 ]
 
 const providerCodes = [

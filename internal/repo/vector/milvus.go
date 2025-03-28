@@ -224,7 +224,7 @@ func (m *MilvusVectorStore) FulltextSearch(ctx context.Context, query string, n 
 }
 
 func (m *MilvusVectorStore) HybridSearch(ctx context.Context, query string, n int, threshold float32,
-	denseWeight, sparseWeight float64) ([]*model.KbSearchReturnDocument, error) {
+	option model.HybridSearchOption) ([]*model.KbSearchReturnDocument, error) {
 	if err := m.client.UseDatabase(ctx, milvusclient.NewUseDatabaseOption(milvusStoreDbName)); err != nil {
 		return nil, err
 	}
@@ -244,14 +244,14 @@ func (m *MilvusVectorStore) HybridSearch(ctx context.Context, query string, n in
 	denseRequest := milvusclient.NewAnnRequest("embedding", n, entity.FloatVector(queryVector)).
 		WithAnnParam(denseParams).
 		WithFilter(filter)
-	// 权重reranker，将全文搜索和相似度搜索的结果进行加权融合
-	reranker := milvusclient.NewWeightedReranker([]float64{sparseWeight, denseWeight})
-
-	option := milvusclient.NewHybridSearchOption(milvusStoreCollectionName, n, sparseRequest, denseRequest).
-		WithReranker(reranker).
+	searchOption := milvusclient.NewHybridSearchOption(milvusStoreCollectionName, n, sparseRequest, denseRequest).
 		WithOutputFields("file_id", "chunk_data", "chunk_id")
-
-	result, err := m.client.HybridSearch(ctx, option)
+	// 权重reranker，将全文搜索和相似度搜索的结果进行加权融合
+	if option.WeightedRerank {
+		reranker := milvusclient.NewWeightedReranker([]float64{option.SparseWeight, option.DenseWeight})
+		searchOption.WithReranker(reranker)
+	}
+	result, err := m.client.HybridSearch(ctx, searchOption)
 	if err != nil {
 		return nil, err
 	}

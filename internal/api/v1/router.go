@@ -67,13 +67,14 @@ func (r *Router) Init(templateHandler *TemplateHandler, workflowHandler *Workflo
 			kb.GET("/list", kbHandler.List)
 			kb.POST("/upload", kbHandler.Upload)
 			kb.POST("/upload-batch", kbHandler.BatchUpload)
-			kb.DELETE("/file/:id", kbHandler.Delete)
+			kb.DELETE("/file/:id", kbHandler.DeleteDocument)
 			kb.GET("/download/:id", kbHandler.DownloadFile)
 			kb.POST("/process/start/:id", kbHandler.StartFileProcessing)
 			kb.POST("/similarity-search", kbHandler.SimilaritySearch)
 			kb.POST("/fulltext-search", kbHandler.FulltextSearch)
 			kb.POST("/hybrid-search", kbHandler.HybridSearch)
 			kb.GET("/chunks", kbHandler.ListChunks)
+			kb.DELETE("/:id", kbHandler.DeleteKb)
 		}
 		file := v1.Group("/fs")
 		{
