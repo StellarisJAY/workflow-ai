@@ -28,7 +28,7 @@ const searchRequest = ref({
     weightedRerank: false,
     denseWeight: 0.5,
     sparseWeight: 0.5,
-    rerankModelId: ""
+    rerankModelId: "0"
   },
 });
 const searchResult = ref([]);

@@ -23,7 +23,7 @@ onBeforeMount(()=>{
       weightedRerank: false,
       sparseWeight: 0.5,
       denseWeight: 0.5,
-      rerankModelId: ""
+      rerankModelId: "0"
     };
   }
 })
