@@ -131,13 +131,13 @@ func (k *KnowledgeBaseHandler) ListFiles(c *gin.Context) {
 	c.JSON(200, common.NewSuccessResponseWithTotal(list, total))
 }
 
-func (k *KnowledgeBaseHandler) Delete(c *gin.Context) {
+func (k *KnowledgeBaseHandler) DeleteDocument(c *gin.Context) {
 	param := c.Param("id")
 	id, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		panic(err)
 	}
-	if err := k.service.Delete(c, id); err != nil {
+	if err := k.service.DeleteDocument(c, id); err != nil {
 		panic(err)
 	}
 	c.JSON(200, common.NewSuccessResponse(nil))
@@ -219,4 +219,16 @@ func (k *KnowledgeBaseHandler) ListChunks(c *gin.Context) {
 		panic(err)
 	}
 	c.JSON(200, common.NewSuccessResponseWithTotal(result, total))
+}
+
+func (k *KnowledgeBaseHandler) DeleteKb(c *gin.Context) {
+	param := c.Param("id")
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	if err := k.service.Delete(c, id); err != nil {
+		panic(err)
+	}
+	c.JSON(200, common.NewSuccessResponse(nil))
 }

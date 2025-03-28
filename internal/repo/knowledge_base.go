@@ -111,8 +111,40 @@ func (k *KnowledgeBaseRepo) ListFile(ctx context.Context, kbId int64, query *mod
 	return result, p.Total, nil
 }
 
+func (k *KnowledgeBaseRepo) ListKbFile(ctx context.Context, kbId int64, query *model.KbFileQuery) ([]*model.KnowledgeBaseFile, int, error) {
+	var result []*model.KnowledgeBaseFile
+	p := common.Pagination{Page: query.Page, PageSize: query.PageSize, Paged: query.Paged}
+	d := k.DB(ctx).Table(model.KnowledgeBaseFile{}.TableName()).
+		Scopes(common.WithPagination(&p)).
+		Where("kb_id = ?", kbId)
+	if err := d.Scan(&result).Error; err != nil {
+		return nil, 0, err
+	}
+	return result, p.Total, nil
+}
+
 func (k *KnowledgeBaseRepo) DeleteFile(ctx context.Context, fileId int64) error {
 	return k.DB(ctx).WithContext(ctx).Delete(&model.KnowledgeBaseFile{}, fileId).Error
+}
+
+func (k *KnowledgeBaseRepo) DeleteFileTasks(ctx context.Context, fileIds []int64) error {
+	return k.DB(ctx).Table(model.KbFileProcessTask{}.TableName()).
+		WithContext(ctx).
+		Where("file_id IN (?)", fileIds).
+		Delete(nil).
+		Error
+}
+
+func (k *KnowledgeBaseRepo) DeleteFiles(ctx context.Context, kbId int64) error {
+	return k.DB(ctx).Table(model.KnowledgeBaseFile{}.TableName()).
+		WithContext(ctx).
+		Where("kb_id=?", kbId).
+		Delete(&model.KnowledgeBaseFile{}).Error
+}
+
+func (k *KnowledgeBaseRepo) DeleteKb(ctx context.Context, kbId int64) error {
+	return k.DB(ctx).WithContext(ctx).
+		Delete(&model.KnowledgeBase{}, kbId).Error
 }
 
 func (k *KnowledgeBaseRepo) GetFileProcessTask(ctx context.Context, taskId int64) (*model.KbFileProcessTask, error) {

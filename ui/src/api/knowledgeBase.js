@@ -56,5 +56,8 @@ export default {
     },
     listChunks: function(query) {
         return api.get("/knowledgeBase/chunks",query);
+    },
+    delete: function(id) {
+        return api.delete("/knowledgeBase/" + id);
     }
 }

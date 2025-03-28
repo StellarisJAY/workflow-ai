@@ -7,15 +7,13 @@ import {
   Drawer,
   Form,
   PageHeader,
-  Pagination, FormItem, Input, Textarea, Select, message,Spin
+  Pagination, FormItem, Input, Textarea, Select, message, Spin, Menu, MenuItem, Popconfirm, Dropdown
 } from "ant-design-vue";
 import {onMounted, ref} from "vue";
-import llmAPI from '../../api/llm.js';
 import knowledgeBaseAPI from '../../api/knowledgeBase.js';
-import {SettingOutlined, UploadOutlined} from "@ant-design/icons-vue";
+import {EllipsisOutlined, SettingOutlined, UploadOutlined} from "@ant-design/icons-vue";
 import timeUtil from "../../util/timeUtil.js";
 import {useRouter} from "vue-router";
-import providerAPI from "../../api/provider.js";
 import provider from "../../api/provider.js";
 const query = ref({
   page: 1,
@@ -72,6 +70,16 @@ function createKnowledgeBase() {
     creating.value = false;
   })
 }
+
+function deleteKnowledgeBase(id) {
+  knowledgeBaseAPI.delete(id).then(resp=>{
+    message.success("删除成功");
+    listKnowledgeBase();
+  }).catch(err=>{
+    message.error(err.message);
+  })
+}
+
 </script>
 
 <template>
@@ -84,11 +92,28 @@ function createKnowledgeBase() {
     <template #renderItem="{item}">
       <ListItem>
         <Card :title="item.name" :hoverable="true">
+          <template #extra>
+            <Dropdown>
+              <a class="ant-dropdown-link" @click.prevent>
+                <EllipsisOutlined />
+              </a>
+              <template #overlay>
+                <Menu>
+                  <MenuItem>
+                    <Popconfirm title="确认删除该知识库？知识库中所有文件将被删除无法恢复"
+                                @confirm="deleteKnowledgeBase(item.id)"
+                                confirm-text="确认"
+                                cancel-text="取消">
+                      删除
+                    </Popconfirm>
+                  </MenuItem>
+                </Menu>
+              </template>
+            </Dropdown>
+          </template>
           <template #actions>
             <UploadOutlined />
             <SettingOutlined @click="router.push('/knowledgeBase/'+item.id)"/>
-          </template>
-          <template #extra>
           </template>
           <FormItem label="创建时间">{{timeUtil.formatDateTime(item['addTime'])}}</FormItem>
           <FormItem label="文档数量">{{item['documentCount']}}</FormItem>

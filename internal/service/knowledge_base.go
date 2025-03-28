@@ -10,6 +10,7 @@ import (
 	"github.com/StellrisJAY/workflow-ai/internal/repo/fs"
 	"github.com/StellrisJAY/workflow-ai/internal/repo/vector"
 	"github.com/bwmarrin/snowflake"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"strconv"
@@ -133,7 +134,7 @@ func (k *KnowledgeBaseService) ListFile(ctx context.Context, kbId int64, query *
 	return files, total, nil
 }
 
-func (k *KnowledgeBaseService) Delete(ctx context.Context, fileId int64) error {
+func (k *KnowledgeBaseService) DeleteDocument(ctx context.Context, fileId int64) error {
 	return k.tm.Tx(ctx, func(ctx context.Context) error {
 		file, err := k.kbRepo.GetFileDetail(ctx, fileId)
 		if err != nil {
@@ -244,7 +245,7 @@ func (k *KnowledgeBaseService) FulltextSearch(ctx context.Context, request *mode
 
 func (k *KnowledgeBaseService) HybridSearch(ctx context.Context, request *model.KbSearchRequest) (*model.KbSearchResult, error) {
 	documents, err := k.processor.HybridSearch(ctx, request.KbId, request.Input, request.Count,
-		request.ScoreThreshold, request.DenseWeight, request.SparseWeight)
+		request.ScoreThreshold, request.HybridSearchOption)
 	if err != nil {
 		return nil, err
 	}
@@ -274,4 +275,49 @@ func (k *KnowledgeBaseService) findReferencedFiles(ctx context.Context, document
 		idList = append(idList, i)
 	}
 	return k.kbRepo.GetFilesInIdList(ctx, idList)
+}
+
+func (k *KnowledgeBaseService) Delete(ctx context.Context, id int64) error {
+	return k.tm.Tx(ctx, func(ctx context.Context) error {
+		query := model.KbFileQuery{}
+		query.Paged = false
+		files, _, err := k.kbRepo.ListKbFile(ctx, id, &query)
+		if err != nil {
+			return err
+		}
+		fileIds := make([]int64, len(files))
+		for i, file := range files {
+			if file.Status == model.KbFileProcessing {
+				return errors.New("有文件正在处理中，无法删除")
+			}
+			fileIds[i] = file.Id
+		}
+		// 删除知识库表
+		if err := k.kbRepo.DeleteKb(ctx, id); err != nil {
+			return err
+		}
+		// 删除文件表
+		if err := k.kbRepo.DeleteFiles(ctx, id); err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		// 删除文件解析任务表
+		if err := k.kbRepo.DeleteFileTasks(ctx, fileIds); err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		// 删除向量数据库记录 和 文件数据
+		store, err := k.vf.MakeVectorStore(ctx, id, nil)
+		if err != nil {
+			return err
+		}
+		for _, file := range files {
+			if err := store.Delete(ctx, file.Id); err != nil {
+				log.Printf("failed to delete vector store for fileId %d: %v", file.Id, err)
+			}
+			if err := k.fs.Delete(ctx, file.Url); err != nil {
+				log.Printf("failed to delete file data for fileId %d: %v; key=%s", file.Id, err, file.Url)
+			}
+		}
+		return nil
+	})
 }
